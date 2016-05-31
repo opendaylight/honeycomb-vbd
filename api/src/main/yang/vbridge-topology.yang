@@ -7,7 +7,7 @@ module vbridge-topology {
 
     organization "Cisco Systems, Inc.";
 
-    contact "Robert Varga <rovarga@cisco.com>";
+    contact "Robert Varga <rovarga@cisco.com>, Wojciech Dec <wdec@cisco.com>";
 
     description
         "Base model describing a virtual bridge domain mapped expressed
@@ -20,6 +20,11 @@ module vbridge-topology {
         This program and the accompanying materials are made available under the
         terms of the Eclipse Public License v1.0 which accompanies this distribution,
         and is available at http://www.eclipse.org/legal/epl-v10.html";
+
+    revision "2016-05-31" {
+        description "Changing model to support VLAN topologies,
+        as well as their mapping to device interfaces.";
+    }
 
     revision "2016-01-29" {
         description "Initial cut";
@@ -91,7 +96,9 @@ module vbridge-topology {
             presence "Indicates this node is part of the bridge domain";
 
             // Pointer to the NETCONF node which supports this bridge member
-            must "../../nt:supporting-node";
+            //The following criterion requires would require the node to be
+            //mounted which is not realistic at install time.
+//            must "../../nt:supporting-node";
 
             // FIXME: this is implementation specific, depends on whether
             // the underlay has an a concept of a bridge domain.
@@ -136,6 +143,23 @@ module vbridge-topology {
                 config false;
                 type extref:external-reference;
                 mandatory true;
+            }
+            container ethernet-interface {
+                description
+                    "Reference to other interfaces that need to be added
+                     into the bridge. This interface is a direct system interface
+                     reference configured by the user prior to the device
+                     being attached.";
+
+                leaf interface-name {
+                    type string;
+                    mandatory true;
+                }
+                leaf vlan {
+                    type uint16 {
+                          range "1..4094";
+                    }
+                }
             }
         }
     }

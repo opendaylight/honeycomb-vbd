@@ -19,7 +19,7 @@
 
   <feature name='odl-vbd-api' version='${project.version}' description='OpenDaylight :: vbd :: api'>
     <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
-    <bundle>mvn:org.opendaylight.vbd/vbd-api/{{VERSION}}</bundle>
+    <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-api/{{VERSION}}</bundle>
   </feature>
 
   <feature name='odl-vbd' version='${project.version}' description='OpenDaylight :: vbd'>
@@ -27,8 +27,8 @@
     <feature version='${project.version}'>odl-vbd-api</feature>
     <feature version='${netconf.version}'>odl-netconf-connector-ssh</feature>
     <feature version='${netconf.version}'>odl-netconf-topology</feature>
-    <bundle>mvn:org.opendaylight.vbd/vbd-impl/{{VERSION}}</bundle>
-    <configfile finalname="${configfile.directory}/vbd.xml">mvn:org.opendaylight.vbd/vbd-impl/{{VERSION}}/xml/config</configfile>
+    <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-impl/{{VERSION}}</bundle>
+    <configfile finalname="${configfile.directory}/vbd.xml">mvn:org.opendaylight.honeycomb.vbd/vbd-impl/{{VERSION}}/xml/config</configfile>
   </feature>
 
   <feature name='odl-vbd-rest' version='${project.version}' description='OpenDaylight :: vbd :: REST'>
@@ -41,7 +41,7 @@
     <feature version="${restconf.version}">odl-mdsal-apidocs</feature>
     <feature version="${restconf.version}">odl-mdsal-xsql</feature>
     <feature version="${dlux.version}">odl-dlux-yangui</feature>
-    <bundle>mvn:org.opendaylight.vbd/vbd-ui-bundle/{{VERSION}}</bundle>
+    <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-ui-bundle/{{VERSION}}</bundle>
   </feature>
 
 </features>

@@ -15,7 +15,7 @@
         <relativePath/>
     </parent>
 
-  <groupId>org.opendaylight.vbd</groupId>
+  <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-ui-bundle</artifactId>
   <name>vbd-ui-bundle</name>
   <version>1.0.0-SNAPSHOT</version>
@@ -70,7 +70,7 @@
             <phase>generate-resources</phase>
             <configuration>
               <outputDirectory>${project.build.directory}/generated-resources</outputDirectory>
-              <groupId>org.opendaylight.vbd</groupId>
+              <groupId>org.opendaylight.honeycomb.vbd</groupId>
               <includeArtifactIds>vbd-ui-module</includeArtifactIds>
               <excludes>META-INF\/**</excludes>
               <excludeTransitive>true</excludeTransitive>

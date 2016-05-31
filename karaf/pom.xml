@@ -15,7 +15,7 @@
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
-  <groupId>org.opendaylight.vbd</groupId>
+  <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-karaf</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <name>${project.artifactId}</name>

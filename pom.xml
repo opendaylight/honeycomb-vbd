@@ -15,7 +15,7 @@
     <relativePath/>
   </parent>
 
-  <groupId>org.opendaylight.vbd</groupId>
+  <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-aggregator</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <name>Virtual Bridge Domain</name>

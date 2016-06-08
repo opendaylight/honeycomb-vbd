@@ -60,7 +60,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
                     (KeyedInstanceIdentifier<Topology, TopologyKey>) c.getRootPath().getRootIdentifier()
                     .firstIdentifierOf(Topology.class);
 
-            Preconditions.checkArgument(!topology.isWildcarded(), "Wildcard topology %s is not supported", topology);
+            Preconditions.checkArgument(!topology.isWildcarded(), "Wildcard topology %PPrint is not supported", topology);
 
             final DataObjectModification<VbridgeTopology> mod = c.getRootNode();
             switch (mod.getModificationType()) {

@@ -48,9 +48,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.bridge.domains.BridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TunnelType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.TunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point.InterfaceType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.UserInterface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -64,7 +67,7 @@ import org.slf4j.LoggerFactory;
 final class VppModifier {
     private static final Long DEFAULT_ENCAP_VRF_ID = 0L;
 
-    private static final Logger LOG = LoggerFactory.getLogger(BridgeDomain.class);
+    private static final Logger LOG = LoggerFactory.getLogger(VppModifier.class);
     private final MountPointService mountService;
     private final String bridgeDomainName;
     private TopologyVbridgeAugment config;
@@ -127,13 +130,25 @@ final class VppModifier {
                                         if (ip != null) {
                                             resultFuture.set(Optional.of(ip));
                                             break;
+                                        } else {
+                                            LOG.debug("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
+                                            resultFuture.setException(new IllegalStateException());
                                         }
+                                    } else {
+                                        LOG.debug("Ipv4 addresses list is empty for node {}", PPrint.node(iiToVpp));
+                                        resultFuture.setException(new IllegalStateException());
                                     }
+                                } else {
+                                    LOG.debug("Ipv4 address for interface {} on node {} is null!", interface1, PPrint.node(iiToVpp));
+                                    resultFuture.setException(new IllegalStateException());
                                 }
+                            } else {
+                                LOG.debug("Cannot get Interface1 augmentation for node {}", PPrint.node(iiToVpp));
+                                resultFuture.setException(new IllegalStateException());
                             }
                         }
                     } else {
-                        LOG.debug("There is no inferface with ipv4 address set at VPP {}.", iiToVpp);
+                        LOG.debug("There is no inferface with ipv4 address set for node {}.", PPrint.node(iiToVpp));
                         resultFuture.set(Optional.<Ipv4AddressNoZone>absent());
                     }
                 }
@@ -155,26 +170,32 @@ final class VppModifier {
         final Vxlan vxlanData = prepareVxlan(ipSrc, ipDst);
         final Interface intfData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
 
+        LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {
+            LOG.debug("vppDataBroker is {}", vppDataBroker);
             final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
+            LOG.debug("Created new write tx {}", wTx.toString());
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class, new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
+            LOG.debug("Created interface IID {}", iiToInterface);
             wTx.put(LogicalDatastoreType.CONFIGURATION, iiToInterface, intfData);
-            final CheckedFuture<Void, TransactionCommitFailedException> submitFuture = wTx.submit();
-            Futures.addCallback(submitFuture, new FutureCallback<Void>() {
+
+            LOG.debug("Submitting new interface to config store...");
+
+            Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
                 @Override
                 public void onSuccess(@Nullable Void result) {
-                    LOG.debug("Writing super virtual interface to {} finished successfully.",iiToVpp.getKey().getNodeId());
+                    LOG.info("Writing super virtual interface to {} finished successfully.", PPrint.node(iiToVpp));
                 }
 
                 @Override
                 public void onFailure(Throwable t) {
-                    LOG.debug("Writing super virtual interface to {} failed.", iiToVpp.getKey().getNodeId(), t);
+                    LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iiToVpp), t);
                 }
             });
         } else {
-            LOG.debug("Writing virtual interface {} to VPP {} wasn't successfull because missing data broker.", VbdUtil.provideVxlanId(vxlanTunnelId), iiToVpp);
+            LOG.warn("Writing virtual interface {} to VPP {} wasn't successful because data broker is missing", VbdUtil.provideVxlanId(vxlanTunnelId), iiToVpp);
         }
     }
 
@@ -194,11 +215,14 @@ final class VppModifier {
         vxlanBuilder.setSrc(new IpAddress(ipSrc));
         vxlanBuilder.setDst(new IpAddress(ipDst));
         final TunnelParameters tunnelParameters = config.getTunnelParameters();
-        if (tunnelParameters instanceof org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.tunnel.parameters.Vxlan) {
-            org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.tunnel.parameters.Vxlan vxlan =
-                    (org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.tunnel.parameters.Vxlan) tunnelParameters;
-            //TODO: handle NPE
-            vxlanBuilder.setVni(vxlan.getVxlan().getVni());
+        final Class<? extends TunnelType> tunnelType = config.getTunnelType();
+        if (tunnelType.equals(TunnelTypeVxlan.class)) {
+            if (tunnelParameters instanceof VxlanTunnelParameters) {
+                final VxlanTunnelParameters vxlanTunnelParams = (VxlanTunnelParameters) tunnelParameters;
+                vxlanBuilder.setVni(vxlanTunnelParams.getVni());
+            } else {
+                LOG.warn("Tunnel type is vxlan but tunnel parameters are not for vxlan!?!?");
+            }
         }
         vxlanBuilder.setEncapVrfId(DEFAULT_ENCAP_VRF_ID);
         return vxlanBuilder.build();
@@ -207,7 +231,7 @@ final class VppModifier {
     void addInterfaceToBridgeDomainOnVpp(final DataBroker vppDataBroker, final TerminationPointVbridgeAugment termPointVbridgeAug) {
         final InterfaceType interfaceType = termPointVbridgeAug.getInterfaceType();
         if (interfaceType instanceof UserInterface) {
-            //REMARK: according contract in YANG model this should be URI to data on mount point (accroding to RESTCONF)
+            //REMARK: according contract in YANG model this should be URI to data on mount point (according to RESTCONF)
             //It was much more easier to just await concrete interface name, thus isn't necessary parse it (splitting on '/')
             final ExternalReference userInterface = ((UserInterface) interfaceType).getUserInterface();
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToVpp =
@@ -237,8 +261,6 @@ final class VppModifier {
         bridgeDomainBuilder.setName(bridgeDomainName);
         return bridgeDomainBuilder.build();
     }
-
-
 
     private L2 prepareL2Data() {
         final L2Builder l2Builder = new L2Builder();

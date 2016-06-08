@@ -12,7 +12,7 @@ module vbridge-topology {
     description
         "Base model describing a virtual bridge domain mapped expressed
         as a network topology. Implementations of this model are expected
-        to map this topology onto an underlay transport/managent topology,
+        to map this topology onto an underlay transport/management topology,
         such as a NETCONF topology talking to forwarding boxes
 
         Copyright (c) 2016 Cisco Systems, Inc. and others.  All rights reserved.
@@ -25,7 +25,6 @@ module vbridge-topology {
         description "Initial cut";
     }
 
-    import ietf-inet-types { prefix "inet"; }
     import network-topology { prefix nt; revision-date 2013-10-21; }
     import odl-external-reference { prefix extref; }
     import v3po { prefix "v3po"; }
@@ -42,16 +41,10 @@ module vbridge-topology {
         }
     }
 
-    identity tunnel-type-vxlan {
-        // FIXME: should be in a vxlan-specific model
-        description "VXLAN tunneling";
-        base tunnel-type;
-    }
-
     augment "/nt:network-topology/nt:topology/nt:topology-types" {
         ext:augment-identifier "topology-types-vbridge-augment";
         container vbridge-topology {
-            presence "Indicates a virtual bridge domain topology";
+            presence "Indicates that this topology is a virtual bridge domain topology";
         }
     }
 
@@ -68,15 +61,9 @@ module vbridge-topology {
         }
 
         choice tunnel-parameters {
-            container vxlan {
-                // FIXME: should be in a vxlan-specific model
-                when "../type = tunnel-type-vxlan";
-                leaf vni {
-                    description "VNI to use for encap";
-                    type v3po:vxlan-vni;
-                    mandatory true;
-                }
-            }
+            description "Empty container which will be augmented with
+                         parameters specific to a particular underlay
+                         tunnel technology";
         }
 
         uses v3po:bridge-domain-attributes;

@@ -16,6 +16,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
@@ -23,16 +25,16 @@ import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.InterfacesState;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface1;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.Ipv4;
-import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.Address;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface2;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.Ipv4;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.Vpp;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
@@ -86,15 +88,15 @@ final class VppModifier {
      * Tryies to read ipv4 addresses from all specified {@code iiToVpps } vpps.
      *
      * @param iiToVpps collection of instance identifiers which points to concrete mount points.
-     * @return future which contains list of ip addreases in the same order as was specified in {@code iiToVpps}
+     * @return future which contains list of ip addresses in the same order as was specified in {@code iiToVpps}
      */
     @SafeVarargs
-    final ListenableFuture<List<Optional<Ipv4AddressNoZone>>> readIpAddressesFromVpps(final KeyedInstanceIdentifier<Node, NodeKey>... iiToVpps) {
-        final List<ListenableFuture<Optional<Ipv4AddressNoZone>>> ipv4Futures = new ArrayList<>(iiToVpps.length);
+    final List<Optional<Ipv4AddressNoZone>> readIpAddressesFromVpps(final KeyedInstanceIdentifier<Node, NodeKey>... iiToVpps) throws ExecutionException, InterruptedException {
+        final List<Optional<Ipv4AddressNoZone>> ipv4Futures = new ArrayList<>(iiToVpps.length);
         for (final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp : iiToVpps) {
-            ipv4Futures.add(readIpAddressFromVpp(iiToVpp));
+            ipv4Futures.add(readIpAddressFromVpp(iiToVpp).get());
         }
-        return Futures.successfulAsList(ipv4Futures);
+        return ipv4Futures;
     }
 
     /**
@@ -112,57 +114,78 @@ final class VppModifier {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {
             final ReadOnlyTransaction rTx = vppDataBroker.newReadOnlyTransaction();
-            final CheckedFuture<Optional<Interfaces>, ReadFailedException> interfaceStateFuture
-                    = rTx.read(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.create(Interfaces.class));
+            final CheckedFuture<Optional<InterfacesState>, ReadFailedException> interfaceStateFuture
+                    = rTx.read(LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.create(InterfacesState.class));
 
-            Futures.addCallback(interfaceStateFuture, new FutureCallback<Optional<Interfaces>>() {
+            Futures.addCallback(interfaceStateFuture, new FutureCallback<Optional<InterfacesState>>() {
                 @Override
-                public void onSuccess(final Optional<Interfaces> optInterfaces) {
+                public void onSuccess(final Optional<InterfacesState> optInterfaces) {
                     if (optInterfaces.isPresent()) {
-                        for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface intf : optInterfaces.get().getInterface()) {
-                            final Interface1 interface1 = intf.getAugmentation(Interface1.class);
-                            if (interface1 != null) {
-                                final Ipv4 ipv4 = interface1.getIpv4();
-                                if (ipv4 != null) {
-                                    final List<Address> addresses = ipv4.getAddress();
-                                    if (!addresses.isEmpty()) {
-                                        final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
-                                        if (ip != null) {
-                                            resultFuture.set(Optional.of(ip));
-                                            break;
-                                        } else {
-                                            LOG.debug("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
-                                            resultFuture.setException(new IllegalStateException());
-                                        }
-                                    } else {
-                                        LOG.debug("Ipv4 addresses list is empty for node {}", PPrint.node(iiToVpp));
-                                        resultFuture.setException(new IllegalStateException());
-                                    }
-                                } else {
-                                    LOG.debug("Ipv4 address for interface {} on node {} is null!", interface1, PPrint.node(iiToVpp));
-                                    resultFuture.setException(new IllegalStateException());
-                                }
-                            } else {
-                                LOG.debug("Cannot get Interface1 augmentation for node {}", PPrint.node(iiToVpp));
-                                resultFuture.setException(new IllegalStateException());
+                        for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf : optInterfaces.get().getInterface()) {
+                            final Optional<Ipv4AddressNoZone> ipOp = readIpAddressFromInterface(intf, iiToVpp);
+                            if (ipOp.isPresent()) {
+                                resultFuture.set(ipOp);
+                                return;
                             }
                         }
                     } else {
-                        LOG.debug("There is no inferface with ipv4 address set for node {}.", PPrint.node(iiToVpp));
-                        resultFuture.set(Optional.<Ipv4AddressNoZone>absent());
+                        LOG.debug("There appear to be no interfaces on node {}.", PPrint.node(iiToVpp));
                     }
+
+                    // if we got here, we were unable to successfully read an ip address from any of the node's interfaces
+                    resultFuture.set(Optional.absent());
                 }
 
                 @Override
-                public void onFailure(Throwable t) {
+                public void onFailure(@Nonnull Throwable t) {
                     resultFuture.setException(t);
                 }
             });
         } else {
             LOG.debug("Data broker for vpp {} is missing.", iiToVpp);
-            resultFuture.set(Optional.<Ipv4AddressNoZone>absent());
         }
+
         return resultFuture;
+    }
+
+    /**
+     * Read the first available IPv4 address from the given interface.
+     *
+     * @param intf Interface to read an address from
+     * @param iiToVpp Node which contains the given interface
+     * @return An optional which is set to the IPv4 address which was read from the interface. If no IPv4 address could
+     * be read from this interface, the optional will be absent.
+     */
+    private Optional<Ipv4AddressNoZone>
+    readIpAddressFromInterface(final org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf,
+                               final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        final Interface2 augIntf = intf.getAugmentation(Interface2.class);
+
+        if (augIntf == null) {
+            LOG.trace("Cannot get Interface2 augmentation for intf {}", intf);
+            return Optional.absent();
+        }
+
+        final Ipv4 ipv4 = augIntf.getIpv4();
+        if (ipv4 == null) {
+            LOG.debug("Ipv4 address for interface {} on node {} is null!", augIntf, PPrint.node(iiToVpp));
+            return Optional.absent();
+        }
+
+        final List<Address> addresses = ipv4.getAddress();
+        if (addresses.isEmpty()) {
+            LOG.debug("Ipv4 addresses list is empty for intf {} on node {}", augIntf, PPrint.node(iiToVpp));
+            return Optional.absent();
+        }
+
+        final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
+        if (ip == null) {
+            LOG.debug("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
+            return Optional.absent();
+        }
+
+        LOG.debug("Got ip address {} from interface {} on node {}", ip.getValue(), augIntf, PPrint.node(iiToVpp));
+        return Optional.of(ip);
     }
 
     void createVirtualInterfaceOnVpp(final Ipv4AddressNoZone ipSrc, final Ipv4AddressNoZone ipDst, final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp,
@@ -173,12 +196,9 @@ final class VppModifier {
         LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {
-            LOG.debug("vppDataBroker is {}", vppDataBroker);
             final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
-            LOG.debug("Created new write tx {}", wTx.toString());
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class, new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
-            LOG.debug("Created interface IID {}", iiToInterface);
             wTx.put(LogicalDatastoreType.CONFIGURATION, iiToInterface, intfData);
 
             LOG.debug("Submitting new interface to config store...");
@@ -186,11 +206,11 @@ final class VppModifier {
             Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
                 @Override
                 public void onSuccess(@Nullable Void result) {
-                    LOG.info("Writing super virtual interface to {} finished successfully.", PPrint.node(iiToVpp));
+                    LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iiToVpp));
                 }
 
                 @Override
-                public void onFailure(Throwable t) {
+                public void onFailure(@Nonnull Throwable t) {
                     LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iiToVpp), t);
                 }
             });
@@ -199,14 +219,16 @@ final class VppModifier {
         }
     }
 
-    private static Interface prepareVirtualInterfaceData(final Vxlan vxlan, Integer vxlanTunnelId) {
+    private Interface prepareVirtualInterfaceData(final Vxlan vxlan, Integer vxlanTunnelId) {
         final InterfaceBuilder interfaceBuilder = new InterfaceBuilder();
         //TODO implement tunnel counter
         interfaceBuilder.setName(VbdUtil.provideVxlanId(vxlanTunnelId));
         interfaceBuilder.setType(VxlanTunnel.class);
         VppInterfaceAugmentationBuilder vppInterfaceAugmentationBuilder = new VppInterfaceAugmentationBuilder();
         vppInterfaceAugmentationBuilder.setVxlan(vxlan);
+        vppInterfaceAugmentationBuilder.setL2(prepareL2Data(true));
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppInterfaceAugmentationBuilder.build());
+        interfaceBuilder.setEnabled(true);
         return interfaceBuilder.build();
     }
 
@@ -240,12 +262,12 @@ final class VppModifier {
             InstanceIdentifier<L2> iiToV3poL2 = iiToVpp.augmentation(VppInterfaceAugmentation.class).child(L2.class);
             LOG.debug("Writing L2 data to configuration DS to concrete interface.");
             final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
-            wTx.put(LogicalDatastoreType.CONFIGURATION, iiToV3poL2, prepareL2Data(), true);
+            wTx.put(LogicalDatastoreType.CONFIGURATION, iiToV3poL2, prepareL2Data(false), true);
             wTx.submit();
         }
     }
 
-    ListenableFuture<Void> addVppToBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final Node node) {
+    ListenableFuture<Void> addVppToBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {
             final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
@@ -262,11 +284,17 @@ final class VppModifier {
         return bridgeDomainBuilder.build();
     }
 
-    private L2 prepareL2Data() {
+    /**
+     * Prepare the L2 interface fields from the VPP interface augmentation in the v3po model.
+     *
+     * @param bridgedVirtualInterface value for the bridged-virtual-interface field
+     * @return the built L2 object
+     */
+    private L2 prepareL2Data(final boolean bridgedVirtualInterface) {
         final L2Builder l2Builder = new L2Builder();
         final BridgeBasedBuilder bridgeBasedBuilder = new BridgeBasedBuilder();
         bridgeBasedBuilder.setSplitHorizonGroup((short) 0);
-        bridgeBasedBuilder.setBridgedVirtualInterface(false);
+        bridgeBasedBuilder.setBridgedVirtualInterface(bridgedVirtualInterface);
         bridgeBasedBuilder.setBridgeDomain(bridgeDomainName);
         l2Builder.setInterconnection(bridgeBasedBuilder.build());
         return l2Builder.build();

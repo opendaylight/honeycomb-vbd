@@ -60,7 +60,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
                     (KeyedInstanceIdentifier<Topology, TopologyKey>) c.getRootPath().getRootIdentifier()
                     .firstIdentifierOf(Topology.class);
 
-            Preconditions.checkArgument(!topology.isWildcarded(), "Wildcard topology %PPrint is not supported", topology);
+            Preconditions.checkArgument(!topology.isWildcarded(), "Wildcard topology %s is not supported", topology);
 
             final DataObjectModification<VbridgeTopology> mod = c.getRootNode();
             switch (mod.getModificationType()) {
@@ -81,7 +81,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
 
     private synchronized void completeDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         LOG.debug("Bridge domain for {} completed operation", topology);
-        domains.remove(topology);
+        domains.remove(topology.getKey());
 
         synchronized (domains) {
             domains.notify();
@@ -89,7 +89,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
     }
 
     private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
-        final BridgeDomain prev = domains.remove(topology);
+        final BridgeDomain prev = domains.remove(topology.getKey());
         if (prev == null) {
             LOG.warn("No domain for {}, not restarting", topology);
             return;

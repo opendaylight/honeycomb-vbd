@@ -308,11 +308,11 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
     private List<Ipv4AddressNoZone> getTunnelEndpoints(final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp,
                                                        final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp) {
         try {
-            return vppModifier.readIpAddressesFromVpps(iiToSrcVpp, iiToDstVpp).get().stream()
-                    .filter(Objects::nonNull)
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
-                    .collect(Collectors.toList());
+            return vppModifier.readIpAddressesFromVpps(iiToSrcVpp, iiToDstVpp).stream()
+            .filter(Objects::nonNull)
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toList());
         } catch (final InterruptedException | ExecutionException ex) {
             LOG.warn("Got exception while reading IP addresses from nodes {} and {}", PPrint.node(iiToSrcVpp), PPrint.node(iiToDstVpp), ex);
         }
@@ -409,7 +409,7 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
                     .child(Topology.class, new TopologyKey(topologyMount))
                     .child(Node.class, new NodeKey(nodeMount));
             nodesToVpps.put(node.getNodeId(), iiToVpp);
-            ListenableFuture<Void> addVppToBridgeDomainFuture = vppModifier.addVppToBridgeDomain(iiToVpp, node);
+            ListenableFuture<Void> addVppToBridgeDomainFuture = vppModifier.addVppToBridgeDomain(iiToVpp);
             addSupportingBridgeDomain(addVppToBridgeDomainFuture, node);
         }
     }

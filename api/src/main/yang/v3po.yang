@@ -42,7 +42,13 @@ module v3po {
       "This type is used by to reference a bridged virtual interface";
   }
 
+  // FIXME: should be in a vxlan-specific model
   identity vxlan-tunnel {
+    base if:interface-type;
+  }
+
+  // TODO: move this field into vlan-specific model
+  identity vlan-tunnel {
     base if:interface-type;
   }
 

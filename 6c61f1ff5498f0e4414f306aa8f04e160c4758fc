@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba51214e_eca9d37c",
+        "filename": "api/src/main/yang/vlan-tunnel.yang",
+        "patchSetId": 1
+      },
+      "lineNbr": 67,
+      "author": {
+        "id": 612
+      },
+      "writtenOn": "2016-06-13T14:27:28Z",
+      "side": 1,
+      "message": "This represents path to the interface but in implementation a name of super-interface is expected. \n\nplease, either change type of super-interface to string or change implementation where it will expect path to interface",
+      "range": {
+        "startLine": 67,
+        "startChar": 24,
+        "endLine": 67,
+        "endChar": 42
+      },
+      "revId": "6c61f1ff5498f0e4414f306aa8f04e160c4758fc",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba51214e_2cbbcbc5",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/BridgeDomain.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 380,
+      "author": {
+        "id": 612
+      },
+      "writtenOn": "2016-06-13T14:27:28Z",
+      "side": 1,
+      "message": "this is place where you expect that superInterface is interface name but in yang it is type of external path\n\nsee comment in yang",
+      "range": {
+        "startLine": 380,
+        "startChar": 48,
+        "endLine": 380,
+        "endChar": 91
+      },
+      "revId": "6c61f1ff5498f0e4414f306aa8f04e160c4758fc",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

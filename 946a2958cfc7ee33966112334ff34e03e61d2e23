@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba51214e_3fe2c8d5",
+        "filename": "api/src/main/yang/vlan-tunnel.yang",
+        "patchSetId": 2
+      },
+      "lineNbr": 1,
+      "author": {
+        "id": 2106
+      },
+      "writtenOn": "2016-06-14T08:00:42Z",
+      "side": 1,
+      "message": "This model duplicates info that we already have in: https://git.opendaylight.org/gerrit/#/c/39670/\n\nWe should converge the models if needed, instead of having two.",
+      "range": {
+        "startLine": 1,
+        "startChar": 0,
+        "endLine": 1,
+        "endChar": 6
+      },
+      "revId": "946a2958cfc7ee33966112334ff34e03e61d2e23",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "ba51214e_1fdb841c",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/BridgeDomain.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 82,
+      "author": {
+        "id": 2106
+      },
+      "writtenOn": "2016-06-14T08:00:42Z",
+      "side": 1,
+      "message": "It would be IMO better if the code adopted a command executor pattern like in https://git.opendaylight.org/gerrit/#/c/38675/2/renderers/vpp-l2-renderer/src/main/java/org/opendaylight/groupbasedpolicy/renderer/vpp/commands/BridgeDomainCommand.java\n\nBridge Domain and sub interface creation should be split into two different commands.",
+      "range": {
+        "startLine": 82,
+        "startChar": 12,
+        "endLine": 82,
+        "endChar": 24
+      },
+      "revId": "946a2958cfc7ee33966112334ff34e03e61d2e23",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

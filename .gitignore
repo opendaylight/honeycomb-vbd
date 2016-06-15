@@ -13,4 +13,4 @@ target
 .DS_Store
 META-INF
 maven-metadata-local.xml
-vbd/gui/module/node
+gui/module/src/main/resources/vpp/node/

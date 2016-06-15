@@ -36,10 +36,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.Vpp;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentationBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanTunnel;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.*;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.Vxlan;
@@ -241,7 +238,13 @@ final class VppModifier {
         if (tunnelType.equals(TunnelTypeVxlan.class)) {
             if (tunnelParameters instanceof VxlanTunnelParameters) {
                 final VxlanTunnelParameters vxlanTunnelParams = (VxlanTunnelParameters) tunnelParameters;
-                vxlanBuilder.setVni(vxlanTunnelParams.getVni());
+                final VxlanVni vni = vxlanTunnelParams.getVni();
+
+                if (vni != null) {
+                    vxlanBuilder.setVni(vni);
+                } else {
+                    LOG.warn("Tunnel type is VXLAN but no VNI parameter was given! Creating new vxlan without VNI, result is undefined!");
+                }
             } else {
                 LOG.warn("Tunnel type is vxlan but tunnel parameters are not for vxlan!?!?");
             }
@@ -293,7 +296,7 @@ final class VppModifier {
     private L2 prepareL2Data(final boolean bridgedVirtualInterface) {
         final L2Builder l2Builder = new L2Builder();
         final BridgeBasedBuilder bridgeBasedBuilder = new BridgeBasedBuilder();
-        bridgeBasedBuilder.setSplitHorizonGroup((short) 0);
+        bridgeBasedBuilder.setSplitHorizonGroup((short) 1);
         bridgeBasedBuilder.setBridgedVirtualInterface(bridgedVirtualInterface);
         bridgeBasedBuilder.setBridgeDomain(bridgeDomainName);
         l2Builder.setInterconnection(bridgeBasedBuilder.build());

@@ -30,6 +30,7 @@ import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.*;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.BridgeMember;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.BridgeMemberBuilder;
@@ -154,7 +155,20 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
 
         if (t2.getTunnelType().equals(TunnelTypeVxlan.class)) {
             final VxlanTunnelParameters vxlanTunnelParams =  (VxlanTunnelParameters) t2.getTunnelParameters();
-            LOG.debug("vxlan vni: {}", vxlanTunnelParams.getVni().getValue());
+
+            if (vxlanTunnelParams == null) {
+                LOG.warn("Vxlan type topology was created but vxlan tunnel parameters is null!");
+                return null;
+            }
+
+            final VxlanVni vni = vxlanTunnelParams.getVni();
+
+            if (vni == null) {
+                LOG.warn("Vxlan type topology was created but VNI parameter is null!");
+                return null;
+            }
+
+            LOG.debug("vxlan vni: {}", vni.getValue());
         }
 
         return null;

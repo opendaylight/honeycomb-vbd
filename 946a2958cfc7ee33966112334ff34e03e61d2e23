@@ -1,0 +1,8 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: Martin Sunal <msunal@cisco.com>
+Code-Review+2: Marek Gradzki <mgradzki@cisco.com>
+Submitted-by: Marek Gradzki <mgradzki@cisco.com>
+Submitted-at: Thu, 16 Jun 2016 08:49:30 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/40211
+Project: honeycomb/vbd
+Branch: refs/heads/master

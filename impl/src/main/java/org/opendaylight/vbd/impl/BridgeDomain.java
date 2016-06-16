@@ -256,13 +256,7 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
                         }
                     }
 
-                    for (DataObjectModification<? extends DataObject> child : mod.getModifiedChildren()) {
-                        LOG.debug("Topology {} modified child {}", PPrint.topology(topology), child);
-
-                        if (Node.class.isAssignableFrom(child.getDataType())) {
-                            modifyNode((DataObjectModification<Node>) child);
-                        }
-                    }
+                    handleModifiedChildren(mod.getModifiedChildren());
 
                     break;
                 case WRITE:
@@ -277,13 +271,23 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
                         LOG.error("Topology {} has no configuration, good luck!", PPrint.topology(topology));
                     }
 
-
-                    // FIXME: deal with nodes
+                    // handle any nodes which were written with the new topology
+                    handleModifiedChildren(mod.getModifiedChildren());
 
                     break;
                 default:
                     LOG.warn("Unhandled topology modification {}", mod);
                     break;
+            }
+        }
+    }
+
+    private void handleModifiedChildren(final Collection<DataObjectModification<? extends DataObject>> children) {
+        for (final DataObjectModification<? extends DataObject> child : children) {
+            LOG.debug("Topology {} modified child {}", PPrint.topology(topology), child);
+
+            if (Node.class.isAssignableFrom(child.getDataType())) {
+                modifyNode((DataObjectModification<Node>) child);
             }
         }
     }

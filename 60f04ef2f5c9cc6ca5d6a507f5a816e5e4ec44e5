@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba51214e_31130d5e",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 299,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2016-06-16T09:56:35Z",
+      "side": 1,
+      "message": "Split horizon grup 0 is used as default value by VPP which means it is not specified (see https://wiki.fd.io/view/VPP/Command-line_Interface_(CLI)_Guide#bridge-domain_commands). \nAfter the model refactoring split-horizon-group value is not mandatory (if not given, HC sets it to zero).",
+      "range": {
+        "startLine": 299,
+        "startChar": 8,
+        "endLine": 299,
+        "endChar": 59
+      },
+      "revId": "60f04ef2f5c9cc6ca5d6a507f5a816e5e4ec44e5",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

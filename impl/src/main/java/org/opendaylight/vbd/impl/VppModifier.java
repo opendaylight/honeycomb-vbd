@@ -223,7 +223,7 @@ final class VppModifier {
         interfaceBuilder.setType(VxlanTunnel.class);
         VppInterfaceAugmentationBuilder vppInterfaceAugmentationBuilder = new VppInterfaceAugmentationBuilder();
         vppInterfaceAugmentationBuilder.setVxlan(vxlan);
-        vppInterfaceAugmentationBuilder.setL2(prepareL2Data(true));
+        vppInterfaceAugmentationBuilder.setL2(prepareL2Data(false));
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppInterfaceAugmentationBuilder.build());
         interfaceBuilder.setEnabled(true);
         return interfaceBuilder.build();

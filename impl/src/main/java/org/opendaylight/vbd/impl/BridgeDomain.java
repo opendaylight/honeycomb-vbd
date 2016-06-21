@@ -350,7 +350,6 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         final BridgeBasedBuilder bridgeBld = new BridgeBasedBuilder();
         bridgeBld.setBridgeDomain(this.bridgeDomainName);
         bridgeBld.setBridgedVirtualInterface(false);
-        bridgeBld.setSplitHorizonGroup((short) 0);
 
         final L2Builder l2Bld = new L2Builder();
         l2Bld.setRewrite(rewriteBld.build());

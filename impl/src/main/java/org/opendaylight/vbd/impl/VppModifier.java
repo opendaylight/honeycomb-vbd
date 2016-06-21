@@ -296,7 +296,6 @@ final class VppModifier {
     private L2 prepareL2Data(final boolean bridgedVirtualInterface) {
         final L2Builder l2Builder = new L2Builder();
         final BridgeBasedBuilder bridgeBasedBuilder = new BridgeBasedBuilder();
-        bridgeBasedBuilder.setSplitHorizonGroup((short) 1);
         bridgeBasedBuilder.setBridgedVirtualInterface(bridgedVirtualInterface);
         bridgeBasedBuilder.setBridgeDomain(bridgeDomainName);
         l2Builder.setInterconnection(bridgeBasedBuilder.build());

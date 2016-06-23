@@ -170,7 +170,7 @@ final class VppModifier {
         }
 
         final List<Address> addresses = ipv4.getAddress();
-        if (addresses.isEmpty()) {
+        if (addresses == null || addresses.isEmpty()) {
             LOG.debug("Ipv4 addresses list is empty for intf {} on node {}", augIntf, PPrint.node(iiToVpp));
             return Optional.absent();
         }

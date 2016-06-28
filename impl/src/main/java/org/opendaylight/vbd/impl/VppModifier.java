@@ -82,6 +82,35 @@ final class VppModifier {
                 .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.bridge.domains.BridgeDomain.class, new BridgeDomainKey(bridgeDomainName));
     }
 
+    Optional<ListenableFuture<Void>> deleteBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
+
+        if (vppDataBroker == null) {
+            LOG.warn("Got null data broker when attempting to delete bridge domain {}", bridgeDomainName);
+            return Optional.absent();
+        }
+
+        final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
+
+        wTx.delete(LogicalDatastoreType.CONFIGURATION, this.iiBridgeDomainOnVPP);
+
+        final ListenableFuture<Void> txResult = wTx.submit();
+
+        Futures.addCallback(txResult, new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(@Nullable Void result) {
+                LOG.debug("Successfully deleted bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable t) {
+                LOG.warn("Failed to delete bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp), t);
+            }
+        });
+
+        return Optional.of(txResult);
+    }
+
     /**
      * Tryies to read ipv4 addresses from all specified {@code iiToVpps } vpps.
      *

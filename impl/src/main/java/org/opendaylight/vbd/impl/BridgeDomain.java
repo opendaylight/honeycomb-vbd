@@ -275,6 +275,18 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         chain.close();
     }
 
+    private void deleteBridgeDomain() {
+        LOG.debug("Deleting entire bridge domain {}", bridgeDomainName);
+        final Collection<KeyedInstanceIdentifier<Node, NodeKey>> vppNodes = nodesToVpps.values();
+        vppNodes.forEach(this::removeNodeFromBridgeDomain);
+        stop();
+    }
+
+    private void removeNodeFromBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> vppNode) {
+        LOG.debug("Removing node {} from bridge domain {}", PPrint.node(vppNode), bridgeDomainName);
+        vppModifier.deleteBridgeDomain(vppNode);
+    }
+
     @Override
     public synchronized void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<Topology>> changes) {
         for (DataTreeModification<Topology> c : changes) {
@@ -284,6 +296,7 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
             switch (mod.getModificationType()) {
                 case DELETE:
                     LOG.debug("Topology {} deleted, expecting shutdown", PPrint.topology(topology));
+                    deleteBridgeDomain();
                     break;
                 case SUBTREE_MODIFIED:
                     // First check if the configuration has changed
@@ -338,7 +351,13 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         switch (nodeMod.getModificationType()) {
             case DELETE:
                 LOG.debug("Topology {} node {} deleted", PPrint.topology(topology), nodeMod.getIdentifier());
-                // FIXME: do something
+                final Node deletedNode = nodeMod.getDataBefore();
+                if (deletedNode != null) {
+                    final KeyedInstanceIdentifier<Node, NodeKey> vppIID = nodesToVpps.get(deletedNode.getNodeId()).iterator().next();
+                    removeNodeFromBridgeDomain(vppIID);
+                } else {
+                    LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
+                }
                 break;
             case SUBTREE_MODIFIED:
                 LOG.debug("Topology {} node {} modified", PPrint.topology(topology), nodeMod.getIdentifier());

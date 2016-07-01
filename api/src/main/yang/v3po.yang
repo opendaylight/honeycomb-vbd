@@ -25,6 +25,9 @@ module v3po {
   import yang-ext {
     prefix "ext";
   }
+  import vpp-classifier {
+    prefix "vpp-classifier";
+  }
 
   typedef bridge-domain-ref {
     type leafref {
@@ -42,13 +45,7 @@ module v3po {
       "This type is used by to reference a bridged virtual interface";
   }
 
-  // FIXME: should be in a vxlan-specific model
   identity vxlan-tunnel {
-    base if:interface-type;
-  }
-
-  // TODO: move this field into vlan-specific model
-  identity vlan-tunnel {
     base if:interface-type;
   }
 
@@ -363,6 +360,33 @@ module v3po {
       }
   }
 
+  grouping acl-base-attributes {
+    description
+      "Defines references to classify tables.
+       At least one table reference should be specified.";
+    container l2-acl {
+      leaf classify-table {
+        type vpp-classifier:classify-table-ref;
+        description
+          "An L2 ACL table";
+      }
+    }
+    container ip4-acl {
+      leaf classify-table {
+        type vpp-classifier:classify-table-ref;
+        description
+          "An IPv4 ACL table";
+      }
+    }
+    container ip6-acl {
+      leaf classify-table {
+        type vpp-classifier:classify-table-ref;
+        description
+          "An IPv6 ACL table";
+      }
+    }
+  }
+
   augment /if:interfaces/if:interface {
     ext:augment-identifier "vpp-interface-augmentation";
 
@@ -410,6 +434,10 @@ module v3po {
       when "../if:type = 'v3po:vxlan-gpe-tunnel'";
 
       uses vxlan-gpe-base-attributes;
+    }
+
+    container acl {
+      uses acl-base-attributes;
     }
   }
 
@@ -473,6 +501,10 @@ module v3po {
       "not (../if:ipv6[if:enabled = 'true']/if:address/if:ip))";
 
       uses l2-base-attributes;
+    }
+
+    container acl {
+      uses acl-base-attributes;
     }
   }
 

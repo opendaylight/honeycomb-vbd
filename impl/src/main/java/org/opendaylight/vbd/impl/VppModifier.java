@@ -223,7 +223,7 @@ final class VppModifier {
         interfaceBuilder.setType(VxlanTunnel.class);
         VppInterfaceAugmentationBuilder vppInterfaceAugmentationBuilder = new VppInterfaceAugmentationBuilder();
         vppInterfaceAugmentationBuilder.setVxlan(vxlan);
-        vppInterfaceAugmentationBuilder.setL2(prepareL2Data(false));
+        vppInterfaceAugmentationBuilder.setL2(prepareL2Data(false, vxlan.getVni().getValue().shortValue()));
         interfaceBuilder.addAugmentation(VppInterfaceAugmentation.class, vppInterfaceAugmentationBuilder.build());
         interfaceBuilder.setEnabled(true);
         return interfaceBuilder.build();
@@ -265,7 +265,7 @@ final class VppModifier {
             InstanceIdentifier<L2> iiToV3poL2 = iiToVpp.augmentation(VppInterfaceAugmentation.class).child(L2.class);
             LOG.debug("Writing L2 data to configuration DS to concrete interface.");
             final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
-            wTx.put(LogicalDatastoreType.CONFIGURATION, iiToV3poL2, prepareL2Data(false), true);
+            wTx.put(LogicalDatastoreType.CONFIGURATION, iiToV3poL2, prepareL2Data(false, null), true);
             wTx.submit();
         }
     }
@@ -293,11 +293,14 @@ final class VppModifier {
      * @param bridgedVirtualInterface value for the bridged-virtual-interface field
      * @return the built L2 object
      */
-    private L2 prepareL2Data(final boolean bridgedVirtualInterface) {
+    private L2 prepareL2Data(final boolean bridgedVirtualInterface, final Short splitHgrp ) {
         final L2Builder l2Builder = new L2Builder();
         final BridgeBasedBuilder bridgeBasedBuilder = new BridgeBasedBuilder();
         bridgeBasedBuilder.setBridgedVirtualInterface(bridgedVirtualInterface);
         bridgeBasedBuilder.setBridgeDomain(bridgeDomainName);
+        if (splitHgrp!=null) {
+            bridgeBasedBuilder.setSplitHorizonGroup(splitHgrp);
+        }
         l2Builder.setInterconnection(bridgeBasedBuilder.build());
         return l2Builder.build();
     }

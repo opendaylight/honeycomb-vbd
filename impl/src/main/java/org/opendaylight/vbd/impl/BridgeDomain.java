@@ -46,14 +46,8 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBasedBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.LinkVbridgeAugment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.LinkVbridgeAugmentBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.NodeVbridgeAugment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeAugment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeAugmentBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugment;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyTypesVbridgeAugmentBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.*;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.TunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.BridgeMember;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.BridgeMemberBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.TunnelInterfaceBuilder;
@@ -127,6 +121,7 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
     private static final int SOURCE_VPP_INDEX = 0;
     private static final int DESTINATION_VPP_INDEX = 1;
     private static final short VLAN_TAG_INDEX_ZERO = 0;
+    private static final int MAXLEN = 8;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
 
@@ -537,11 +532,13 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
             final Ipv4AddressNoZone ipAddressDstVpp = endpoints.get(DESTINATION_VPP_INDEX);
             LOG.debug("All required IP addresses for creating tunnel were obtained. (src: {}, dst: {})", ipAddressSrcVpp.getValue(), ipAddressDstVpp.getValue());
 
+            String distinguisher = deriveDistinguisher();
+
             addTerminationPoint(topology.child(Node.class, new NodeKey(dstNode)), dstVxlanTunnelId);
             addTerminationPoint(topology.child(Node.class, new NodeKey(sourceNode)), srcVxlanTunnelId);
 
-            addLinkBetweenTerminationPoints(sourceNode, dstNode, srcVxlanTunnelId, dstVxlanTunnelId);
-            addLinkBetweenTerminationPoints(dstNode, sourceNode, srcVxlanTunnelId, dstVxlanTunnelId);
+            addLinkBetweenTerminationPoints(sourceNode, dstNode, srcVxlanTunnelId, dstVxlanTunnelId, distinguisher);
+            addLinkBetweenTerminationPoints(dstNode, sourceNode, srcVxlanTunnelId, dstVxlanTunnelId, distinguisher);
 
             //writing v3po:vxlan container to source node
             vppModifier.createVirtualInterfaceOnVpp(ipAddressSrcVpp, ipAddressDstVpp, iiToSrcVpp, srcVxlanTunnelId);
@@ -553,9 +550,10 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
     }
 
     private void addLinkBetweenTerminationPoints(final NodeId newVpp, final NodeId odlVpp,
-                                                 final int srcVxlanTunnelId, final int dstVxlanTunnelId) {
-        //TODO clarify how should identifier of link looks like
-        final String linkIdStr = newVpp.getValue() + "-" + odlVpp.getValue();
+                                                 final int srcVxlanTunnelId, final int dstVxlanTunnelId,
+                                                 final String distinguisher) {
+
+        final String linkIdStr = newVpp.getValue() + "-" + distinguisher + "-" + odlVpp.getValue();
         final LinkId linkId = new LinkId(linkIdStr);
         final KeyedInstanceIdentifier<Link, LinkKey> iiToLink = topology.child(Link.class, new LinkKey(linkId));
         final WriteTransaction wTx = chain.newWriteOnlyTransaction();
@@ -669,5 +667,23 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
 
         // FIXME: do something smarter
         setConfiguration(mod.getDataAfter());
+    }
+
+    private String deriveDistinguisher() {
+
+        String def = "";
+        final TunnelParameters tunnelParameters = config.getTunnelParameters();
+        final Class<? extends TunnelType> tunnelType = config.getTunnelType();
+
+        if (tunnelType.equals(TunnelTypeVxlan.class)) {
+            if (tunnelParameters instanceof VxlanTunnelParameters) {
+                final VxlanTunnelParameters vxlanTunnelParams = (VxlanTunnelParameters) tunnelParameters;
+                final VxlanVni vni = vxlanTunnelParams.getVni();
+                def = vni.getValue().toString();
+                int maxLength = (def.length() < MAXLEN) ? def.length() : MAXLEN;
+                def = def.substring(0, maxLength);
+            }
+        }
+        return def;
     }
 }

@@ -509,10 +509,9 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
      *
      * @return list of peer nodes
      */
-    private List<KeyedInstanceIdentifier<Node, NodeKey>> getNodePeers(final KeyedInstanceIdentifier<Node, NodeKey> nodeIID) {
-        return nodesToVpps.entries().stream()
-                .filter(entry -> !entry.getValue().getKey().equals(nodeIID.getKey()))
-                .map(Map.Entry::getValue)
+    private List<NodeId> getNodePeers(final NodeId srcNode) {
+        return nodesToVpps.keySet().stream()
+                .filter(key -> !key.equals(srcNode))
                 .collect(Collectors.toList());
     }
 
@@ -520,21 +519,25 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
         final Integer srcVxlanTunnelId = tunnelIdAllocator.nextIdFor(iiToSrcVpp);
 
-        LOG.debug("adding tunnel to node {}", PPrint.node(iiToSrcVpp));
-        for (KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp : getNodePeers(iiToSrcVpp)) {
+        LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode);
+        for (final NodeId dstNode : getNodePeers(sourceNode)) {
+            final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
             final Integer dstVxlanTunnelId = tunnelIdAllocator.nextIdFor(iiToDstVpp);
-            final NodeId dstNode = iiToDstVpp.getKey().getNodeId();
             final List<Ipv4AddressNoZone> endpoints = getTunnelEndpoints(iiToSrcVpp, iiToDstVpp);
 
             Preconditions.checkState(endpoints.size() == 2, "Got IP address list with wrong size (should be 2, actual size is " + endpoints.size() + ")");
 
             final Ipv4AddressNoZone ipAddressSrcVpp = endpoints.get(SOURCE_VPP_INDEX);
             final Ipv4AddressNoZone ipAddressDstVpp = endpoints.get(DESTINATION_VPP_INDEX);
-            LOG.debug("All required IP addresses for creating tunnel were obtained. (src: {}, dst: {})", ipAddressSrcVpp.getValue(), ipAddressDstVpp.getValue());
+            LOG.debug("All required IP addresses for creating tunnel were obtained. (src: {} (node {}), dst: {} (node {}))",
+                    ipAddressSrcVpp.getValue(), ipAddressDstVpp.getValue(), sourceNode, dstNode);
 
             String distinguisher = deriveDistinguisher();
 
+            LOG.debug("Adding term point to dst node {}", dstNode);
             addTerminationPoint(topology.child(Node.class, new NodeKey(dstNode)), dstVxlanTunnelId);
+
+            LOG.debug("Adding term point to src node {}", sourceNode);
             addTerminationPoint(topology.child(Node.class, new NodeKey(sourceNode)), srcVxlanTunnelId);
 
             addLinkBetweenTerminationPoints(sourceNode, dstNode, srcVxlanTunnelId, dstVxlanTunnelId, distinguisher);

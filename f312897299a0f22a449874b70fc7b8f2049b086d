@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "9a561d44_4aeca3f3",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 226,
+      "author": {
+        "id": 612
+      },
+      "writtenOn": "2016-07-22T07:55:23Z",
+      "side": 1,
+      "message": "VNI(24bit) does not fit to SHG(8bit). I think using of constant number could be sufficient.",
+      "range": {
+        "startLine": 226,
+        "startChar": 67,
+        "endLine": 226,
+        "endChar": 106
+      },
+      "revId": "f312897299a0f22a449874b70fc7b8f2049b086d",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

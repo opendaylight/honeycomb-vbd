@@ -73,7 +73,7 @@
               <outputDirectory>${project.build.directory}/generated-resources</outputDirectory>
               <groupId>org.opendaylight.honeycomb.vbd</groupId>
               <includeArtifactIds>vbd-ui-module</includeArtifactIds>
-              <excludes>META-INF\/**</excludes>
+              <excludes>META-INF\/**,vpp/node\/**,vpp/node_modules\/**</excludes>
               <excludeTransitive>true</excludeTransitive>
               <ignorePermissions>false</ignorePermissions>
             </configuration>

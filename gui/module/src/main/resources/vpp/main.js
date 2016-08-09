@@ -7,13 +7,13 @@
  */
 require.config({
   paths : {
-    'angular-material' : 'app/vpp/bower_components/angular-material/angular-material.min',
-    'angular-animate'  : 'app/vpp/bower_components/angular-animate/angular-animate.min',
-    'angular-aria' :  'app/vpp/bower_components/angular-aria/angular-aria.min',
-    'angular-smart-table' :  'app/vpp/bower_components/angular-smart-table/dist/smart-table',
+    'angular-material' : 'app/vpp/vendor/angular-material/angular-material.min',
+    'angular-animate'  : 'app/vpp/vendor/angular-animate/angular-animate.min',
+    'angular-aria' :  'app/vpp/vendor/angular-aria/angular-aria.min',
+    'angular-smart-table' :  'app/vpp/vendor/angular-smart-table/dist/smart-table',
     'lodash' : 'app/vpp/assets/js/lodash.min',
     'next': 'app/vpp/assets/js/next',
-    'angular-ui-grid': 'app/vpp/bower_components/angular-ui-grid/ui-grid.min',
+    'angular-ui-grid': 'app/vpp/vendor/angular-ui-grid/ui-grid.min',
   },
 
   shim : {

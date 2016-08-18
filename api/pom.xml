@@ -63,5 +63,9 @@
       <artifactId>opendaylight-l2-types</artifactId>
       <version>2013.08.27.9-SNAPSHOT</version>
     </dependency>
+    <dependency>
+      <groupId>org.opendaylight.mdsal.model</groupId>
+      <artifactId>ietf-access-control-list</artifactId>
+    </dependency>
   </dependencies>
 </project>

@@ -1,0 +1,9 @@
+Code-Review+1: Daniel Malachovsky <dmalacho@cisco.com>
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: Tyler Levine <tylevine@cisco.com>
+Code-Review+2: Ed Warnicke <hagbard@gmail.com>
+Submitted-by: Ed Warnicke <hagbard@gmail.com>
+Submitted-at: Fri, 19 Aug 2016 19:00:00 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/43522
+Project: honeycomb/vbd
+Branch: refs/heads/master

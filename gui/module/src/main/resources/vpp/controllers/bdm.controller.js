@@ -228,7 +228,7 @@ define(['app/vpp/vpp.module'], function(vpp) {
                         };
                     },
                     controllerAs: 'NewBdDialogCtrl',
-                    templateUrl: $scope.view_path + 'new-bd-dialog.html',
+                    templateUrl: $scope.view_path + 'new-bd-dialog.tpl.html',
                     parent: angular.element(document.body),
                     clickOutsideToClose:false
                 })

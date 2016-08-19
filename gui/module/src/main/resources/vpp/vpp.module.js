@@ -5,16 +5,26 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-define(['angularAMD', 'app/routingConfig', 'ui-bootstrap', 'Restangular', 'angular-animate', 'angular-aria',
-        'angular-material', 'angular-smart-table', 'angular-translate',
-        'angular-translate-loader-partial', 'lodash'], function() {
+define([
+    'app/routingConfig',
+    'Restangular',
+    'angular-translate-loader-partial',
+    'angular-animate',
+    'angular-aria',
+    'angular-material',
+    'angular-smart-table',
+    'lodash'], function() {
 
-  var vpp = angular.module('app.vpp', ['ui.router.state','app.core', 'ui.bootstrap', 'restangular', 'ngAnimate',
-                           'ngAria', 'ngMaterial', 'smart-table', 'pascalprecht.translate']);
+  var vpp = angular.module('app.vpp',
+      [
+          'app.core', 'ui.router.state', 'restangular', 'pascalprecht.translate', 'ngAnimate', 'ngAria',
+          'ngMaterial', 'smart-table', ]);
 
   vpp.register = vpp;
 
-  vpp.config(function ($stateProvider, $compileProvider, $controllerProvider, $provide, $translateProvider, $translatePartialLoaderProvider, NavHelperProvider, $filterProvider, $mdThemingProvider) {
+  vpp.config(function ($stateProvider, $compileProvider, $controllerProvider,
+                       $provide, $translateProvider, $translatePartialLoaderProvider,
+                       NavHelperProvider, $filterProvider, $mdThemingProvider) {
 
     $translatePartialLoaderProvider.addPart('app/vpp/assets/data/locale');
 

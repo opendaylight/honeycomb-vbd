@@ -67,7 +67,7 @@ define(['app/vpp/vpp.module'], function(vpp) {
                         };
                     },
                     controllerAs: 'NewVppDialogCtrl',
-                    templateUrl: $scope.view_path + 'new-vpp-dialog.html',
+                    templateUrl: $scope.view_path + 'new-vpp-dialog.tpl.html',
                     parent: angular.element(document.body),
                     clickOutsideToClose:false
                 })
@@ -120,7 +120,7 @@ define(['app/vpp/vpp.module'], function(vpp) {
                         };
                     },
                     controllerAs: 'ConfigVppDialogCtrl',
-                    templateUrl: $scope.view_path + 'config-vpp-dialog.html',
+                    templateUrl: $scope.view_path + 'config-vpp-dialog.tpl.html',
                     parent: angular.element(document.body),
                     clickOutsideToClose:true
                 });

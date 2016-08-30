@@ -517,11 +517,11 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
 
     private void addTunnel(final NodeId sourceNode) {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
-        final Integer srcVxlanTunnelId = tunnelIdAllocator.nextIdFor(iiToSrcVpp);
 
         LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode);
         for (final NodeId dstNode : getNodePeers(sourceNode)) {
             final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
+            final Integer srcVxlanTunnelId = tunnelIdAllocator.nextIdFor(iiToSrcVpp);
             final Integer dstVxlanTunnelId = tunnelIdAllocator.nextIdFor(iiToDstVpp);
             final List<Ipv4AddressNoZone> endpoints = getTunnelEndpoints(iiToSrcVpp, iiToDstVpp);
 

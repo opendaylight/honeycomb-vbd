@@ -78,7 +78,9 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TpId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.link.attributes.Destination;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.link.attributes.DestinationBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.link.attributes.Source;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.link.attributes.SourceBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyBuilder;
@@ -138,7 +140,7 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
     private BridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                          final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) {
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
-        this.vppModifier = new VppModifier(mountService, bridgeDomainName);
+        this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
 
         this.topology = Preconditions.checkNotNull(topology);
         this.chain = Preconditions.checkNotNull(chain);
@@ -270,6 +272,124 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         chain.close();
     }
 
+    private void deleteBridgeDomain() {
+        LOG.debug("Deleting entire bridge domain {}", bridgeDomainName);
+        final Collection<KeyedInstanceIdentifier<Node, NodeKey>> vppNodes = nodesToVpps.values();
+        vppNodes.forEach(vppModifier::deleteBridgeDomain);
+        nodesToVpps.clear();
+    }
+
+    private ListenableFuture<List<InstanceIdentifier<Link>>> findPrunableLinks(final KeyedInstanceIdentifier<Node, NodeKey> vbdNode) {
+        LOG.debug("Finding prunable links for node {}", PPrint.node(vbdNode));
+
+        final NodeId deletedNodeId = vbdNode.getKey().getNodeId();
+
+        // read the topology to find the links
+        final ReadOnlyTransaction rTx = chain.newReadOnlyTransaction();
+        return Futures.transform(rTx.read(LogicalDatastoreType.OPERATIONAL, topology), new AsyncFunction<Optional<Topology>, List<InstanceIdentifier<Link>>>() {
+            @Override
+            public ListenableFuture<List<InstanceIdentifier<Link>>> apply(Optional<Topology> result) throws Exception {
+                final List<InstanceIdentifier<Link>> prunableLinks = new ArrayList<>();
+
+                if (result != null && result.isPresent()) {
+                    final List<Link> links = result.get().getLink();
+
+                    for (final Link link : links) {
+                        // check if this link's source or destination matches the deleted node
+                        final Source src = link.getSource();
+                        final Destination dst = link.getDestination();
+                        if (src.getSourceNode().equals(deletedNodeId)) {
+                            LOG.debug("Link {} src matches deleted node id {}, adding to prunable list", link.getLinkId(), deletedNodeId);
+                            final InstanceIdentifier<Link> linkIID = topology.child(Link.class, link.getKey());
+                            prunableLinks.add(linkIID);
+                        } else if (dst.getDestNode().equals(deletedNodeId)) {
+                            LOG.debug("Link {} dst matches deleted node id {}, adding to prunable list", link.getLinkId(), deletedNodeId);
+                            final InstanceIdentifier<Link> linkIID = topology.child(Link.class, link.getKey());
+                            prunableLinks.add(linkIID);
+                        }
+                    }
+                } else {
+                    // result is null or not present
+                    LOG.warn("Tried to read virtual bridge topology {}, but got null or absent optional!", PPrint.topology(topology));
+                }
+
+                return Futures.immediateFuture(prunableLinks);
+            }
+        });
+    }
+
+    private void pruneLinks(final KeyedInstanceIdentifier<Node, NodeKey> vbdNode) {
+        LOG.debug("Pruning links to/from node {}", PPrint.node(vbdNode));
+        final ListenableFuture<List<InstanceIdentifier<Link>>> prunableLinksFuture = findPrunableLinks(vbdNode);
+
+        Futures.addCallback(prunableLinksFuture, new FutureCallback<List<InstanceIdentifier<Link>>>() {
+            @Override
+            public void onSuccess(@Nullable List<InstanceIdentifier<Link>> result) {
+                if (result == null) {
+                    LOG.warn("Got null result when finding prunable links for node {} on topology {}", PPrint.node(vbdNode), PPrint.topology(topology));
+                    return;
+                }
+
+                for (final InstanceIdentifier<Link> linkIID : result) {
+                    final WriteTransaction wTx = chain.newWriteOnlyTransaction();
+                    wTx.delete(LogicalDatastoreType.OPERATIONAL, linkIID);
+                    Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+                        @Override
+                        public void onSuccess(@Nullable Void result) {
+                            LOG.debug("Successfully deleted prunable link {} for node {} on vbd topology {}", linkIID, PPrint.node(vbdNode), PPrint.topology(topology));
+                        }
+
+                        @Override
+                        public void onFailure(@Nullable Throwable t) {
+                            LOG.warn("Failed to delete prunable link {} for node {} on vbd topology {}", linkIID, PPrint.node(vbdNode), PPrint.topology(topology), t);
+                        }
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(@Nullable Throwable t) {
+                LOG.warn("Failed to get prunable links for vbd topology {}", PPrint.topology(topology), t);
+            }
+        });
+    }
+
+    private void removeNodeFromBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> vppNode, final KeyedInstanceIdentifier<Node, NodeKey> backingNode) {
+        LOG.debug("Removing node {} from bridge domain {}", PPrint.node(vppNode), bridgeDomainName);
+
+        try {
+            final Optional<ListenableFuture<Void>> deleteFutureOp = vppModifier.deleteBridgeDomain(vppNode);
+            if (deleteFutureOp.isPresent()) {
+                deleteFutureOp.get().get();
+            }
+        } catch (final ExecutionException e) {
+            LOG.warn("Got exception while deleting bridge domain from vpp {} for topology {}", PPrint.node(vppNode), PPrint.topology(topology), e);
+        } catch (final InterruptedException e) {
+            LOG.info("Interrupted while deleting bridge domain from vpp {} for topology {}", PPrint.node(vppNode), PPrint.topology(topology), e);
+            Thread.currentThread().interrupt();
+        }
+
+        pruneLinks(backingNode);
+
+        // remove this node from vbd operational topology
+        final WriteTransaction wTx3 = chain.newWriteOnlyTransaction();
+        wTx3.delete(LogicalDatastoreType.OPERATIONAL, backingNode);
+
+        Futures.addCallback(wTx3.submit(), new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(@Nullable Void result) {
+                LOG.debug("Removed backing node {} from virtual bridge operational topology {}", backingNode.toString(), bridgeDomainName);
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable t) {
+                LOG.warn("Failed to delete node {} from virtual bridge operational topology {}", backingNode.toString(), bridgeDomainName, t);
+            }
+        });
+
+        nodesToVpps.removeAll(vppNode);
+    }
+
     @Override
     public synchronized void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<Topology>> changes) {
         for (DataTreeModification<Topology> c : changes) {
@@ -279,6 +399,7 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
             switch (mod.getModificationType()) {
                 case DELETE:
                     LOG.debug("Topology {} deleted, expecting shutdown", PPrint.topology(topology));
+                    deleteBridgeDomain();
                     break;
                 case SUBTREE_MODIFIED:
                     // First check if the configuration has changed
@@ -333,7 +454,14 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         switch (nodeMod.getModificationType()) {
             case DELETE:
                 LOG.debug("Topology {} node {} deleted", PPrint.topology(topology), nodeMod.getIdentifier());
-                // FIXME: do something
+                final Node deletedNode = nodeMod.getDataBefore();
+                if (deletedNode != null) {
+                    final KeyedInstanceIdentifier<Node, NodeKey> vppIID = nodesToVpps.get(deletedNode.getNodeId()).iterator().next();
+                    final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
+                    removeNodeFromBridgeDomain(vppIID, backingNodeIID);
+                } else {
+                    LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
+                }
                 break;
             case SUBTREE_MODIFIED:
                 LOG.debug("Topology {} node {} modified", PPrint.topology(topology), nodeMod.getIdentifier());
@@ -515,10 +643,16 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
                 .collect(Collectors.toList());
     }
 
+    List<KeyedInstanceIdentifier<Node, NodeKey>> getNodePeersByIID(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        return nodesToVpps.values().stream()
+                .filter(iid -> !iid.equals(iiToVpp))
+                .collect(Collectors.toList());
+    }
+
     private void addTunnel(final NodeId sourceNode) {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
 
-        LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode);
+        LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode.getValue());
         for (final NodeId dstNode : getNodePeers(sourceNode)) {
             final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
             final Integer srcVxlanTunnelId = tunnelIdAllocator.nextIdFor(iiToSrcVpp);
@@ -530,14 +664,14 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
             final Ipv4AddressNoZone ipAddressSrcVpp = endpoints.get(SOURCE_VPP_INDEX);
             final Ipv4AddressNoZone ipAddressDstVpp = endpoints.get(DESTINATION_VPP_INDEX);
             LOG.debug("All required IP addresses for creating tunnel were obtained. (src: {} (node {}), dst: {} (node {}))",
-                    ipAddressSrcVpp.getValue(), ipAddressDstVpp.getValue(), sourceNode, dstNode);
+                    ipAddressSrcVpp.getValue(), sourceNode.getValue(), ipAddressDstVpp.getValue(), dstNode.getValue());
 
             String distinguisher = deriveDistinguisher();
 
-            LOG.debug("Adding term point to dst node {}", dstNode);
+            LOG.debug("Adding term point to dst node {}", dstNode.getValue());
             addTerminationPoint(topology.child(Node.class, new NodeKey(dstNode)), dstVxlanTunnelId);
 
-            LOG.debug("Adding term point to src node {}", sourceNode);
+            LOG.debug("Adding term point to src node {}", sourceNode.getValue());
             addTerminationPoint(topology.child(Node.class, new NodeKey(sourceNode)), srcVxlanTunnelId);
 
             addLinkBetweenTerminationPoints(sourceNode, dstNode, srcVxlanTunnelId, dstVxlanTunnelId, distinguisher);
@@ -648,12 +782,12 @@ final class BridgeDomain implements DataTreeChangeListener<Topology> {
         Futures.addCallback(future, new FutureCallback<Void>() {
             @Override
             public void onSuccess(@Nullable Void result) {
-                LOG.debug("Termination point successfully added to {}.", nodeIID);
+                LOG.debug("Termination point successfully added to {}.", PPrint.node(nodeIID));
             }
 
             @Override
             public void onFailure(@Nonnull Throwable t) {
-                LOG.warn("Failed to add termination point to {}.", nodeIID);
+                LOG.warn("Failed to add termination point to {}.", PPrint.node(nodeIID));
             }
         });
     }

@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a6b29fe_df6682ec",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/BridgeDomain.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 390,
+      "author": {
+        "id": 2106
+      },
+      "writtenOn": "2016-09-09T13:22:52Z",
+      "side": 1,
+      "message": "Think we have a problem with the logic in and around this code...  wTx2.delete(LogicalDatastoreType.CONFIGURATION, vppNode); will get called if a child of the topology is modified/deleted (ag a BD), which will in effect delete the config of the VPP mount.\nThe VPP node should not be removed from the config, nor operational stores by VBD. Only VBD child augmentations should be removed.",
+      "range": {
+        "startLine": 390,
+        "startChar": 13,
+        "endLine": 390,
+        "endChar": 19
+      },
+      "revId": "17d8c013edd38e03a5adbb2b4c2614911b77b2df",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

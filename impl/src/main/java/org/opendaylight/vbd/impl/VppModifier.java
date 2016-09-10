@@ -14,14 +14,20 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.util.stream.Collectors;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
+import org.opendaylight.controller.md.sal.binding.api.ReadTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
@@ -36,11 +42,17 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.*;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.Vpp;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VppInterfaceAugmentationBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanTunnel;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.VxlanVni;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.Vxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.interfaces._interface.VxlanBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.Interconnection;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.l2.base.attributes.interconnection.BridgeBasedBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.BridgeDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.bridge.domains.BridgeDomainBuilder;
@@ -55,10 +67,12 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
+import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  *  Class which is used for manipulation with VPP
@@ -70,16 +84,185 @@ final class VppModifier {
     private static final Logger LOG = LoggerFactory.getLogger(VppModifier.class);
     private final MountPointService mountService;
     private final String bridgeDomainName;
+    private final BridgeDomain bridgeDomain;
     private TopologyVbridgeAugment config;
     private final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.bridge.domains.BridgeDomain> iiBridgeDomainOnVPP;
 
-
-    VppModifier(final MountPointService mountService, final String bridgeDomainName) {
+    VppModifier(final MountPointService mountService, final String bridgeDomainName, final BridgeDomain bridgeDomain) {
         this.mountService = mountService;
+        this.bridgeDomain = bridgeDomain;
         this.bridgeDomainName = bridgeDomainName;
         this.iiBridgeDomainOnVPP = InstanceIdentifier.create(Vpp.class)
                 .child(BridgeDomains.class)
                 .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.bridge.domains.BridgeDomain.class, new BridgeDomainKey(bridgeDomainName));
+    }
+
+    Optional<ListenableFuture<Void>> deleteBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
+
+        if (vppDataBroker == null) {
+            LOG.warn("Got null data broker when attempting to delete bridge domain {}", bridgeDomainName);
+            return Optional.absent();
+        }
+
+        deleteSupportingInterfaces(iiToVpp, vppDataBroker);
+
+        final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
+
+        wTx.delete(LogicalDatastoreType.CONFIGURATION, this.iiBridgeDomainOnVPP);
+
+        final ListenableFuture<Void> txResult = wTx.submit();
+
+        Futures.addCallback(txResult, new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(@Nullable Void result) {
+                LOG.debug("Successfully deleted bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable t) {
+                LOG.warn("Failed to delete bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp), t);
+            }
+        });
+
+        return Optional.of(txResult);
+    }
+
+    private void deleteSupportingInterfaces(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final DataBroker vppDataBroker) {
+        LOG.debug("Deleting interfaces supporting bridge domain {} on node {}", bridgeDomainName, PPrint.node(iiToVpp));
+
+        final List<Interface> allInterfaces = getInterfacesFromVpp(vppDataBroker);
+        final List<Interface> supportingInterfaces = getInterfacesSupportingBridgeDomain(iiToVpp, allInterfaces);
+
+        LOG.debug("There are {} interfaces supporting bridge domain {} on node {}", supportingInterfaces.size(), bridgeDomainName, PPrint.node(iiToVpp));
+
+        if (supportingInterfaces.isEmpty()) {
+            LOG.debug("No interfaces supporting bridge domain {} on node {}. This is expected if this is the last node " +
+                    "to be deleted when the bridge domain is shutting down", bridgeDomainName, PPrint.node(iiToVpp));
+            return;
+        }
+
+        for (final Interface intf : supportingInterfaces) {
+            deleteInterface(iiToVpp, intf, vppDataBroker);
+        }
+
+        final Optional<IpAddress> ipOp = getVtepAddress(iiToVpp, supportingInterfaces);
+
+        if (ipOp.isPresent()) {
+            deletePeerInterfaces(iiToVpp, ipOp.get());
+        } else {
+            LOG.warn("Unable to determine VTEP address for node {} in bridge domain {}. VXLAN tunnels facing this node cannot be deleted!", PPrint.node(iiToVpp), bridgeDomainName);
+        }
+    }
+
+    private void deleteInterface(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final Interface intf, final DataBroker vppDataBroker) {
+        LOG.debug("Deleting interface {} from config DS on vpp {}, it was supporting bridge domain {}", intf.getName(), PPrint.node(iiToVpp), bridgeDomainName);
+
+        final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToIntf = InstanceIdentifier.create(Interfaces.class).child(Interface.class, intf.getKey());
+        final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
+
+        wTx.delete(LogicalDatastoreType.CONFIGURATION, iiToIntf);
+
+        Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(@Nullable Void result) {
+                LOG.debug("Successfully deleted interface {}, which was supporting bridge domain {} on node {}", intf.getName(), bridgeDomainName, PPrint.node(iiToVpp));
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable t) {
+                LOG.warn("Failed to delete interface {}, which was supporting bridge domain {} on node {}", intf.getName(), bridgeDomainName, PPrint.node(iiToVpp), t);
+            }
+        });
+    }
+
+    /**
+     * Find the src for the vxlan tunnels for interfaces supporting the deleted node, and assume that is going to
+     * be the dst address for peer interfaces which should be deleted.
+     */
+    private Optional<IpAddress> getVtepAddress(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final List<Interface> interfaces) {
+        LOG.debug("Finding VTEP address for node {} on bridge domain {}", PPrint.node(iiToVpp), bridgeDomainName);
+        Optional<IpAddress> vtepAddress = Optional.absent();
+
+        for (final Interface intf : interfaces) {
+            final VppInterfaceAugmentation intfAug = intf.getAugmentation(VppInterfaceAugmentation.class);
+
+            if (intfAug == null) {
+                continue;
+            }
+
+            final IpAddress tunnelSrcAddr = intfAug.getVxlan().getSrc();
+
+            if (vtepAddress.isPresent()) {
+                if (!tunnelSrcAddr.equals(vtepAddress.get())) {
+                    LOG.warn("Got differing tunnel src addresses for interfaces which are supporting bridge domain " +
+                            "{} on node {}. Going to assume the first one encountered ({}) is the real VTEP address. Differing address is {}",
+                            bridgeDomainName, PPrint.node(iiToVpp), String.valueOf(vtepAddress.get().getValue()), String.valueOf(tunnelSrcAddr.getValue()));
+                }
+            } else {
+                vtepAddress = Optional.of(tunnelSrcAddr);
+            }
+        }
+
+        final String vtepIpStr = vtepAddress.isPresent() ? String.valueOf(vtepAddress.get().getValue()) : "UNKNOWN";
+        LOG.debug("VTEP address for node {} on bridge domain {} is {}", PPrint.node(iiToVpp), bridgeDomainName, vtepIpStr);
+        return vtepAddress;
+    }
+
+    private void deletePeerInterfaces(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final IpAddress deletedNodeAddress) {
+        LOG.debug("Deleting peer interfaces for node {} in bridge domain {}. Its VTEP address is {}", PPrint.node(iiToVpp), bridgeDomainName, String.valueOf(deletedNodeAddress.getValue()));
+
+        final List<KeyedInstanceIdentifier<Node, NodeKey>> peerIIDs = bridgeDomain.getNodePeersByIID(iiToVpp);
+
+        for (final KeyedInstanceIdentifier<Node, NodeKey> peerIID : peerIIDs) {
+            final DataBroker peerDataBroker = VbdUtil.resolveDataBrokerForMountPoint(peerIID, mountService);
+
+            if (peerDataBroker == null) {
+                LOG.warn("Got null data broker for peer node {}, will not be able to remove VXLAN tunnel interfaces on this node!", PPrint.node(peerIID));
+                continue;
+            }
+
+            getInterfacesFromVpp(peerDataBroker).stream()
+                    .filter(peerIntf -> doesInterfacePointTowardAddress(peerIntf, deletedNodeAddress))
+                    .forEach(peerIntf -> deleteInterface(peerIID, peerIntf, peerDataBroker));
+        }
+    }
+
+    private boolean doesInterfacePointTowardAddress(final Interface intf, final IpAddress address) {
+        final VppInterfaceAugmentation intfAug = intf.getAugmentation(VppInterfaceAugmentation.class);
+
+        if (intfAug == null) {
+            return false;
+        }
+
+        final Vxlan vxlan = intfAug.getVxlan();
+
+        if (vxlan == null) {
+            return false;
+        }
+
+        final IpAddress dst = vxlan.getDst();
+
+        return dst != null && dst.equals(address);
+    }
+
+    private List<Interface> getInterfacesFromVpp(final DataBroker vppDataBroker) {
+        // read interfaces from config DS
+        final ReadOnlyTransaction rTx = vppDataBroker.newReadOnlyTransaction();
+
+        final Optional<Interfaces> interfacesOptional = readFromDs(LogicalDatastoreType.CONFIGURATION, InstanceIdentifier.create(Interfaces.class), rTx);
+
+        if (interfacesOptional.isPresent()) {
+            return interfacesOptional.get().getInterface();
+        }
+
+        return Collections.emptyList();
+    }
+
+    private List<Interface> getInterfacesSupportingBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp,final List<Interface> interfaces) {
+        LOG.debug("Finding interfaces supporting bridge domain {} on node {}", this.bridgeDomainName, PPrint.node(iiToVpp));
+
+        return interfaces.stream().filter(this::isInterfaceSupportingBD).collect(Collectors.toList());
     }
 
     /**
@@ -182,7 +365,7 @@ final class VppModifier {
             return Optional.absent();
         }
 
-        LOG.debug("Got ip address {} from interface {} on node {}", ip.getValue(), augIntf, PPrint.node(iiToVpp));
+        LOG.debug("Got ip address {} from interface {} on node {}", ip.getValue(), intf.getName(), PPrint.node(iiToVpp));
         return Optional.of(ip);
     }
 
@@ -308,5 +491,43 @@ final class VppModifier {
 
     public void setConfig(final TopologyVbridgeAugment config) {
         this.config = config;
+    }
+
+    /**
+     * Reads data from datastore as synchrone call.
+     * @return {@link Optional#isPresent()} is {@code true} if reading was successful and data exists in datastore; {@link Optional#isPresent()} is {@code false} otherwise
+     */
+    public static <T extends DataObject> Optional<T> readFromDs(LogicalDatastoreType store, InstanceIdentifier<T> path, ReadTransaction rTx) {
+        CheckedFuture<Optional<T>, ReadFailedException> resultFuture = rTx.read(store, path);
+        try {
+            return resultFuture.checkedGet();
+        } catch (ReadFailedException e) {
+            LOG.warn("Read failed from DS.", e);
+            return Optional.absent();
+        }
+    }
+
+    private boolean isInterfaceSupportingBD(final Interface intf) {
+        final VppInterfaceAugmentation vppInterface = intf.getAugmentation(VppInterfaceAugmentation.class);
+        if(vppInterface == null) {
+            return false;
+        }
+
+        final L2 l2Data = vppInterface.getL2();
+
+        if (l2Data == null) {
+            return false;
+        }
+
+        final Interconnection interconnection = l2Data.getInterconnection();
+
+        if (!(interconnection instanceof BridgeBased)) {
+            return false;
+        }
+
+        LOG.debug("Got bridge based VPP interface {}", intf.getName());
+
+        return  VxlanTunnel.class.equals(intf.getType())
+                && this.bridgeDomainName.equals(((BridgeBased) interconnection).getBridgeDomain());
     }
 }

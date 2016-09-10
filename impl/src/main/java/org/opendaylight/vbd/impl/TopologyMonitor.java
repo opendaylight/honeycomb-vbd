@@ -65,11 +65,11 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
             final DataObjectModification<VbridgeTopology> mod = c.getRootNode();
             switch (mod.getModificationType()) {
                 case DELETE:
-                    LOG.debug("Topology {} removed", topology);
+                    LOG.debug("Topology {} removed", PPrint.topology(topology));
                     stopDomain(topology);
                     break;
                 case WRITE:
-                    LOG.debug("Topology {} added", topology);
+                    LOG.debug("Topology {} added", PPrint.topology(topology));
                     startDomain(topology);
                     break;
                 default:
@@ -80,7 +80,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
     }
 
     private synchronized void completeDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
-        LOG.debug("Bridge domain for {} completed operation", topology);
+        LOG.debug("Bridge domain for {} completed operation", PPrint.topology(topology));
         domains.remove(topology.getKey());
 
         synchronized (domains) {
@@ -91,7 +91,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
     private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         final BridgeDomain prev = domains.remove(topology.getKey());
         if (prev == null) {
-            LOG.warn("No domain for {}, not restarting", topology);
+            LOG.warn("No domain for {}, not restarting", PPrint.topology(topology));
             return;
         }
 
@@ -103,11 +103,11 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
     private void startDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         final BridgeDomain prev = domains.get(topology.getKey());
         if (prev != null) {
-            LOG.warn("Bridge domain {} for {} already started", prev, topology);
+            LOG.warn("Bridge domain {} for {} already started", prev, PPrint.topology(topology));
             return;
         }
 
-        LOG.debug("Starting bridge domain for {}", topology);
+        LOG.debug("Starting bridge domain for {}", PPrint.topology(topology));
 
         final BindingTransactionChain chain = dataBroker.createTransactionChain(new TransactionChainListener() {
             @Override
@@ -118,7 +118,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
             @Override
             public void onTransactionChainFailed(final TransactionChain<?, ?> chain,
                     final AsyncTransaction<?, ?> transaction, final Throwable cause) {
-                LOG.warn("Bridge domain for {} failed, restarting it", cause);
+                LOG.warn("Bridge domain for topology {} failed, restarting it", PPrint.topology(topology), cause);
                 restartDomain(topology);
             }
         });
@@ -126,14 +126,14 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
         final BridgeDomain domain = BridgeDomain.create(dataBroker, mountService, topology, chain, tunnelIdAllocator);
         domains.put(topology.getKey(), domain);
 
-        LOG.debug("Bridge domain {} for {} started", domain, topology);
+        LOG.debug("Bridge domain {} for {} started", domain, PPrint.topology(topology));
     }
 
     @GuardedBy("this")
     private void stopDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         final BridgeDomain domain = domains.remove(topology.getKey());
         if (domain == null) {
-            LOG.warn("Bridge domain for {} not present", topology);
+            LOG.warn("Bridge domain for {} not present", PPrint.topology(topology));
             return;
         }
 
@@ -157,6 +157,7 @@ final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, 
                 } catch (InterruptedException e) {
                     LOG.warn("Interrupted while waiting for domain shutdown, {} have not completed yet",
                         domains.keySet(), e);
+                    Thread.currentThread().interrupt();
                     break;
                 }
             }

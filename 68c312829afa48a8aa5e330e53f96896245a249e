@@ -1,0 +1,9 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: A H <an.ho@huawei.com>
+Code-Review+1: Michal Cmarada <mcmarada@cisco.com>
+Code-Review+2: Thanh Ha <thanh.ha@linuxfoundation.org>
+Submitted-by: Thanh Ha <thanh.ha@linuxfoundation.org>
+Submitted-at: Sun, 11 Sep 2016 20:35:50 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/45404
+Project: honeycomb/vbd
+Branch: refs/heads/stable/boron

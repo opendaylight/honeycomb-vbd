@@ -13,13 +13,13 @@
     <parent>
         <groupId>org.opendaylight.honeycomb.vbd</groupId>
         <artifactId>vbd-aggregator</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.1-SNAPSHOT</version>
         <relativePath>../</relativePath>
     </parent>
 
     <groupId>org.opendaylight.honeycomb.vbd</groupId>
     <artifactId>vbd-ui</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1-SNAPSHOT</version>
     <name>vbd-ui</name>
     <description>Resources</description>
     <packaging>pom</packaging>

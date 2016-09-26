@@ -1,9 +1,6 @@
 package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbd.impl.rev160202;
 
-import org.opendaylight.vbd.impl.VirtualBridgeDomainManager;
-import org.opendaylight.controller.md.sal.binding.api.DataBroker;
-import org.opendaylight.controller.md.sal.binding.api.MountPointService;
-import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
+import org.opendaylight.controller.sal.common.util.NoopAutoCloseable;
 
 public class VbdModule extends org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbd.impl.rev160202.AbstractVbdModule {
     public VbdModule(org.opendaylight.controller.config.api.ModuleIdentifier identifier, org.opendaylight.controller.config.api.DependencyResolver dependencyResolver) {
@@ -21,12 +18,7 @@ public class VbdModule extends org.opendaylight.yang.gen.v1.urn.opendaylight.par
 
     @Override
     public java.lang.AutoCloseable createInstance() {
-        final BindingAwareBroker brokerDependency = getBrokerDependency();
-        BindingAwareBroker.ProviderContext session = brokerDependency.registerProvider(new VbdProvider());
-
-        DataBroker dataBroker = session.getSALService(DataBroker.class);
-        MountPointService mountService = session.getSALService(MountPointService.class);
-        return VirtualBridgeDomainManager.create(dataBroker, mountService);
+        return NoopAutoCloseable.INSTANCE;
     }
 
 }

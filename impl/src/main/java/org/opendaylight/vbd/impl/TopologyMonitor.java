@@ -8,22 +8,23 @@
 
 package org.opendaylight.vbd.impl;
 
-import com.google.common.base.Preconditions;
-import org.opendaylight.vbd.api.VxlanTunnelIdAllocator;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+
 import javax.annotation.concurrent.GuardedBy;
+
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
+import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
+import org.opendaylight.vbd.api.VxlanTunnelIdAllocator;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.topology.types.VbridgeTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
@@ -33,11 +34,13 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Preconditions;
+
 /**
  * Class responsible for monitoring /network-topology/topology and activating a {@link BridgeDomain} when a particular
  * topology is marked as a bridge domain.
  */
-final class TopologyMonitor implements DataTreeChangeListener<VbridgeTopology>, AutoCloseable {
+final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTopology>, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(TopologyMonitor.class);
 
     @GuardedBy("this")

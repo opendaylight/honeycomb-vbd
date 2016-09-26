@@ -22,14 +22,6 @@ module vbd-impl {
     augment "/config:modules/config:module/config:configuration" {
         case vbd {
             when "/config:modules/config:module/config:type = 'vbd'";
-            container broker {
-                uses config:service-ref {
-                    refine type {
-                        mandatory true;
-                        config:required-identity md-sal-binding:binding-broker-osgi-registry;
-                    }
-                }
-            }
         }
     }
 }

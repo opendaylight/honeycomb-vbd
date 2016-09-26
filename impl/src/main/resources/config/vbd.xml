@@ -19,10 +19,6 @@
         <module>
           <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:vbd:impl">prefix:vbd</type>
           <name>vbd-name</name>
-          <broker>
-            <type xmlns:binding="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">binding:binding-broker-osgi-registry</type>
-            <name>binding-osgi-broker</name>
-          </broker>
         </module>
       </modules>
     </data>

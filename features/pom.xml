@@ -135,19 +135,10 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>vbd-impl</artifactId>
     </dependency>
-
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>vbd-impl</artifactId>
-      <type>xml</type>
-      <classifier>config</classifier>
-    </dependency>
-
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>vbd-api</artifactId>
     </dependency>
-
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>vbd-ui-bundle</artifactId>

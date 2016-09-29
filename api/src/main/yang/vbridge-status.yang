@@ -1,0 +1,40 @@
+module vbridge-status {
+   yang-version 1;
+   namespace "urn:opendaylight:params:xml:ns:yang:vbridge:status";
+   prefix "vbridge-status";
+
+   import v3po {
+      prefix v3po;
+      revision-date "2015-01-05";
+   }
+
+   import yang-ext {
+      prefix ext;
+      revision-date "2013-07-09";
+   }
+
+   revision "2016-10-5" {
+     description
+     "Initial revision of bridge domain completion status.";
+   }
+
+   grouping bridge-domain-status-fields {
+      description "Support fields for bridge domain";
+
+      leaf "bridge-domain-status" {
+      description
+         "Augments vpp-state in OPER with bridge domain status";
+      config false;
+         type enumeration {
+            enum stopped;
+            enum starting;
+            enum started;
+         }
+      }
+   }
+
+   augment "/v3po:vpp-state/v3po:bridge-domains/v3po:bridge-domain" {
+      ext:augment-identifier "bridge-domain-status-augmentation";
+      uses bridge-domain-status-fields;
+   }
+}

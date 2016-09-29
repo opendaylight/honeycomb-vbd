@@ -636,11 +636,16 @@ module v3po {
 
     container bridge-domains {
       // FIXME: Should this live in bridge-domain.yang in a modular fashion ?
-      list bridge-domain {
+      list bridge-domain-state {
 
         key "name";
         leaf name {
           type string;
+        }
+
+        leaf "is-bd-started" {
+            type boolean;
+            default false;
         }
 
         uses bridge-domain-attributes;

@@ -84,13 +84,13 @@ final class VppModifier {
     private static final Logger LOG = LoggerFactory.getLogger(VppModifier.class);
     private final MountPointService mountService;
     private final String bridgeDomainName;
-    private final BridgeDomain bridgeDomain;
+    private final VbdBridgeDomain vbdBridgeDomain;
     private TopologyVbridgeAugment config;
     private final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev150105.vpp.bridge.domains.BridgeDomain> iiBridgeDomainOnVPP;
 
-    VppModifier(final MountPointService mountService, final String bridgeDomainName, final BridgeDomain bridgeDomain) {
+    VppModifier(final MountPointService mountService, final String bridgeDomainName, final VbdBridgeDomain vbdBridgeDomain) {
         this.mountService = mountService;
-        this.bridgeDomain = bridgeDomain;
+        this.vbdBridgeDomain = vbdBridgeDomain;
         this.bridgeDomainName = bridgeDomainName;
         this.iiBridgeDomainOnVPP = InstanceIdentifier.create(Vpp.class)
                 .child(BridgeDomains.class)
@@ -212,7 +212,7 @@ final class VppModifier {
     private void deletePeerInterfaces(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final IpAddress deletedNodeAddress) {
         LOG.debug("Deleting peer interfaces for node {} in bridge domain {}. Its VTEP address is {}", PPrint.node(iiToVpp), bridgeDomainName, String.valueOf(deletedNodeAddress.getValue()));
 
-        final List<KeyedInstanceIdentifier<Node, NodeKey>> peerIIDs = bridgeDomain.getNodePeersByIID(iiToVpp);
+        final List<KeyedInstanceIdentifier<Node, NodeKey>> peerIIDs = vbdBridgeDomain.getNodePeersByIID(iiToVpp);
 
         for (final KeyedInstanceIdentifier<Node, NodeKey> peerIID : peerIIDs) {
             final DataBroker peerDataBroker = VbdUtil.resolveDataBrokerForMountPoint(peerIID, mountService);

@@ -124,8 +124,8 @@ import com.google.common.util.concurrent.ListenableFuture;
  * Implementation of a single Virtual Bridge Domain. It is bound to a particular network topology instance, manages
  * bridge members and projects state into the operational data store.
  */
-final class BridgeDomain implements ClusteredDataTreeChangeListener<Topology> {
-    private static final Logger LOG = LoggerFactory.getLogger(BridgeDomain.class);
+final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology> {
+    private static final Logger LOG = LoggerFactory.getLogger(VbdBridgeDomain.class);
 
     private static final int SOURCE_VPP_INDEX = 0;
     private static final int DESTINATION_VPP_INDEX = 1;
@@ -144,8 +144,8 @@ final class BridgeDomain implements ClusteredDataTreeChangeListener<Topology> {
     private final String iiBridgeDomainOnVPPRest;
     private Multimap<NodeId, KeyedInstanceIdentifier<Node, NodeKey>> nodesToVpps = ArrayListMultimap.create();
 
-    private BridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
-                         final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) {
+    private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
+                            final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
         this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
 
@@ -259,10 +259,12 @@ final class BridgeDomain implements ClusteredDataTreeChangeListener<Topology> {
         });
     }
 
-    static BridgeDomain create(final DataBroker dataBroker,
-                               MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology, final BindingTransactionChain chain,
-                               final VxlanTunnelIdAllocator tunnelIdAllocator) {
-        return new BridgeDomain(dataBroker, mountService, topology, chain, tunnelIdAllocator);
+    @Nonnull
+    static VbdBridgeDomain create(final DataBroker dataBroker, final MountPointService mountService,
+                                  final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
+                                  final BindingTransactionChain chain,
+                                  final VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
+        return new VbdBridgeDomain(dataBroker, mountService, topology, chain, tunnelIdAllocator);
     }
 
     synchronized void forceStop() {

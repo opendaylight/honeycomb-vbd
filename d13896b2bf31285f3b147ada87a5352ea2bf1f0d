@@ -1,0 +1,8 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: Vladimir Lavor <vlavor@cisco.com>
+Code-Review+2: Maros Marsalek <mmarsale@cisco.com>
+Submitted-by: Maros Marsalek <mmarsale@cisco.com>
+Submitted-at: Mon, 03 Oct 2016 14:31:24 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/46169
+Project: honeycomb/vbd
+Branch: refs/heads/master

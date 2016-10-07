@@ -1,0 +1,73 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "7a6b29fe_f824db0f",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-10-07T10:28:07Z",
+      "side": 1,
+      "message": "By looking at the code it seems to me, that\nVbdBridgeDomain name \u003d topology key\nIf so, would we need this mapping?\nPlease correct me if i\u0027m wrong.",
+      "range": {
+        "startLine": 56,
+        "startChar": 51,
+        "endLine": 56,
+        "endChar": 60
+      },
+      "revId": "3447b9b1dfe6d483a80cbdb706dec6276285548f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a6b29fe_f8ccdb8c",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-10-07T10:28:07Z",
+      "side": 1,
+      "message": "Please consider putting this higher, in front of the log \"Bridge domain already message.",
+      "range": {
+        "startLine": 124,
+        "startChar": 8,
+        "endLine": 124,
+        "endChar": 78
+      },
+      "revId": "3447b9b1dfe6d483a80cbdb706dec6276285548f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a6b29fe_b8af037d",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 140,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-10-07T10:28:07Z",
+      "side": 1,
+      "message": "What if this fail?",
+      "range": {
+        "startLine": 140,
+        "startChar": 39,
+        "endLine": 140,
+        "endChar": 124
+      },
+      "revId": "3447b9b1dfe6d483a80cbdb706dec6276285548f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

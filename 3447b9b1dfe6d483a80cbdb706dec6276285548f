@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "7a6b29fe_44d7e1ed",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-10-11T12:58:13Z",
+      "side": 1,
+      "message": "Yes you are right, TopologyKey\u003d\u003dVbdBridgeDomain name, \nbut VbdBridgeDomain object is not just a name.\n\nAt glance, domains looks like cache for started bridge domains and also it\u0027s used as a synchronization lock.\n\nAnyway, my change is just a renaming so I don\u0027t want to niggle with this part of implementation in this patch.",
+      "parentUuid": "7a6b29fe_f824db0f",
+      "range": {
+        "startLine": 56,
+        "startChar": 51,
+        "endLine": 56,
+        "endChar": 60
+      },
+      "revId": "3447b9b1dfe6d483a80cbdb706dec6276285548f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7a6b29fe_f8ccdb8c",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
         "patchSetId": 4
@@ -48,6 +72,30 @@
     },
     {
       "key": {
+        "uuid": "7a6b29fe_e4fd4d70",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 124,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-10-11T12:58:13Z",
+      "side": 1,
+      "message": "Good idea",
+      "parentUuid": "7a6b29fe_f8ccdb8c",
+      "range": {
+        "startLine": 124,
+        "startChar": 8,
+        "endLine": 124,
+        "endChar": 78
+      },
+      "revId": "3447b9b1dfe6d483a80cbdb706dec6276285548f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "7a6b29fe_b8af037d",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
         "patchSetId": 4
@@ -59,6 +107,30 @@
       "writtenOn": "2016-10-07T10:28:07Z",
       "side": 1,
       "message": "What if this fail?",
+      "range": {
+        "startLine": 140,
+        "startChar": 39,
+        "endLine": 140,
+        "endChar": 124
+      },
+      "revId": "3447b9b1dfe6d483a80cbdb706dec6276285548f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "7a6b29fe_444521b2",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 140,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-10-11T12:58:13Z",
+      "side": 1,
+      "message": "Improved, added failure status. I don\u0027t think it\u0027s safe to restart bridge domain at this point, it can run into a lockup.\n\nAppropriate change will be done also in GBP to react on new status.",
+      "parentUuid": "7a6b29fe_b8af037d",
       "range": {
         "startLine": 140,
         "startChar": 39,

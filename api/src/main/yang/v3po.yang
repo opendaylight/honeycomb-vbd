@@ -3,6 +3,13 @@ module v3po {
   namespace "urn:opendaylight:params:xml:ns:yang:v3po";
   prefix "v3po";
 
+  revision "2016-12-14" {
+    description
+      "This revision adds the following new features:
+       - ingress/egress ACLs support
+       - default-action and interface-mode type as a part of ietf-acl configuration";
+  }
+
   revision "2015-01-05" {
     description "Initial revision of v3po model";
   }
@@ -25,11 +32,8 @@ module v3po {
   import yang-ext {
     prefix "ext";
   }
-  import vpp-classifier {
-    prefix "vpp-classifier";
-  }
-  import ietf-access-control-list {
-    prefix "acl";
+  import vpp-acl {
+    prefix "vpp-acl";
   }
 
   typedef bridge-domain-ref {
@@ -416,58 +420,6 @@ module v3po {
       }
   }
 
-  grouping acl-base-attributes {
-    description
-      "Defines references to classify tables.
-       At least one table reference should be specified.";
-    container l2-acl {
-      leaf classify-table {
-        type vpp-classifier:classify-table-ref;
-        description
-          "An L2 ACL table";
-      }
-    }
-    container ip4-acl {
-      leaf classify-table {
-        type vpp-classifier:classify-table-ref;
-        description
-          "An IPv4 ACL table";
-      }
-    }
-    container ip6-acl {
-      leaf classify-table {
-        type vpp-classifier:classify-table-ref;
-        description
-          "An IPv6 ACL table";
-      }
-    }
-  }
-
-  grouping ietf-acl-base-attributes {
-    description
-      "Provides limited support for ietf-acl model.";
-
-    container access-lists {
-      description
-        "Defines references to ietf-acl lists. Before assignment to interface,
-        ACL lists are merged into 3 type of acls (eth0, ip4 and ip6) that are supported by vpp.
-        Then corresponding tables and sessions are created and assigned to the interface.
-
-        Assignment update/delete removes all created tables and sessions and repeats process described above.
-        Update/delete of ACL lists referenced here is not permitted (assignment needs to be removed first).
-
-        Read is supported only for acls that were created and assigned by Honeycomb agent
-        (corresponding metadata are present).";
-      list acl {
-        key "reference";
-
-        leaf reference {
-          type acl:access-control-list-ref;
-        }
-      }
-    }
-  }
-
   augment /if:interfaces/if:interface {
     ext:augment-identifier "vpp-interface-augmentation";
 
@@ -527,11 +479,21 @@ module v3po {
     }
 
     container acl {
-      uses acl-base-attributes;
+      container ingress {
+        uses vpp-acl:acl-base-attributes;
+      }
+      container egress {
+        uses vpp-acl:acl-base-attributes;
+      }
     }
 
     container ietf-acl {
-      uses ietf-acl-base-attributes;
+      container ingress {
+        uses vpp-acl:ietf-acl-base-attributes;
+      }
+      container egress {
+        uses vpp-acl:ietf-acl-base-attributes;
+      }
     }
   }
 
@@ -607,11 +569,21 @@ module v3po {
     }
 
     container acl {
-      uses acl-base-attributes;
+      container ingress {
+        uses vpp-acl:acl-base-attributes;
+      }
+      container egress {
+        uses vpp-acl:acl-base-attributes;
+      }
     }
 
     container ietf-acl {
-      uses ietf-acl-base-attributes;
+      container ingress {
+        uses vpp-acl:ietf-acl-base-attributes;
+      }
+      container egress {
+        uses vpp-acl:ietf-acl-base-attributes;
+      }
     }
   }
 

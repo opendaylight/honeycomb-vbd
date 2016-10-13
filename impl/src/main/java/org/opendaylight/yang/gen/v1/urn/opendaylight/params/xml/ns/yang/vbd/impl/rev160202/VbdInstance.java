@@ -1,5 +1,8 @@
 package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbd.impl.rev160202;
 
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.sal.binding.api.BindingAwareBroker;
@@ -11,26 +14,24 @@ import org.opendaylight.vbd.impl.VirtualBridgeDomainManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
 public class VbdInstance implements AutoCloseable, ClusterSingletonService {
 
-    public static final Logger LOG = LoggerFactory.getLogger(VbdInstance.class);
     private static final ServiceGroupIdentifier IDENTIFIER =
             ServiceGroupIdentifier.create("vbd-service-group-identifier");
-    private DataBroker dataBroker;
-    private ClusterSingletonServiceProvider clusterProvider;
+    private final Logger LOG = LoggerFactory.getLogger(VbdInstance.class);
+    private final DataBroker dataBroker;
+    private final ClusterSingletonServiceProvider clusterProvider;
+    private final MountPointService mountService;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
-    private MountPointService mountService;
     private VirtualBridgeDomainManager vbdManager;
 
-    public VbdInstance(BindingAwareBroker broker, ClusterSingletonServiceProvider clusterProvider) {
-        BindingAwareBroker.ProviderContext session = Preconditions.checkNotNull(broker)
+    public VbdInstance(final DataBroker dataBroker,
+                       final BindingAwareBroker bindingAwareBroker,
+                       final ClusterSingletonServiceProvider clusterProvider) {
+        final BindingAwareBroker.ProviderContext session = Preconditions.checkNotNull(bindingAwareBroker)
                 .registerProvider(new VbdProvider());
-        this.dataBroker = session.getSALService(DataBroker.class);
-        this.mountService = session.getSALService(MountPointService.class);
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
+        this.mountService = Preconditions.checkNotNull(session.getSALService(MountPointService.class));
         this.clusterProvider = Preconditions.checkNotNull(clusterProvider);
     }
 

@@ -17,7 +17,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 public class VbdInstance implements AutoCloseable, ClusterSingletonService {
 
-    public static final Logger LOG = LoggerFactory.getLogger(VbdInstance.class);
+    private final Logger LOG = LoggerFactory.getLogger(VbdInstance.class);
     private static final ServiceGroupIdentifier IDENTIFIER =
             ServiceGroupIdentifier.create("vbd-service-group-identifier");
     private DataBroker dataBroker;
@@ -26,11 +26,13 @@ public class VbdInstance implements AutoCloseable, ClusterSingletonService {
     private MountPointService mountService;
     private VirtualBridgeDomainManager vbdManager;
 
-    public VbdInstance(BindingAwareBroker broker, ClusterSingletonServiceProvider clusterProvider) {
-        BindingAwareBroker.ProviderContext session = Preconditions.checkNotNull(broker)
+    public VbdInstance(final DataBroker dataBroker,
+                       final BindingAwareBroker bindingAwareBroker,
+                       final ClusterSingletonServiceProvider clusterProvider) {
+        final BindingAwareBroker.ProviderContext session = Preconditions.checkNotNull(bindingAwareBroker)
                 .registerProvider(new VbdProvider());
-        this.dataBroker = session.getSALService(DataBroker.class);
-        this.mountService = session.getSALService(MountPointService.class);
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
+        this.mountService = Preconditions.checkNotNull(session.getSALService(MountPointService.class));
         this.clusterProvider = Preconditions.checkNotNull(clusterProvider);
     }
 

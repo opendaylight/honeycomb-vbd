@@ -1,0 +1,7 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+2: Marek Gradzki <mgradzki@cisco.com>
+Submitted-by: Marek Gradzki <mgradzki@cisco.com>
+Submitted-at: Mon, 17 Oct 2016 16:08:23 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/47017
+Project: honeycomb/vbd
+Branch: refs/heads/stable/boron

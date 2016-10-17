@@ -3,6 +3,12 @@ module vpp-vlan {
   namespace "urn:opendaylight:params:xml:ns:yang:vpp:vlan";
   prefix "vpp-vlan";
 
+  revision "2016-12-14" {
+    description
+      "This revision adds the following new features:
+       - ingress/egress ACLs support";
+  }
+
   revision "2015-05-27" {
     description
     "Initial revision of vlan model for VPP.
@@ -26,6 +32,9 @@ module vpp-vlan {
   }
   import v3po {
     prefix v3po;
+  }
+  import vpp-acl {
+    prefix vpp-acl;
   }
 
   typedef sub-interface-status {
@@ -160,7 +169,21 @@ module vpp-vlan {
     }
 
     container acl {
-      uses v3po:acl-base-attributes;
+      container ingress {
+        uses vpp-acl:acl-base-attributes;
+      }
+      container egress {
+        uses vpp-acl:acl-base-attributes;
+      }
+    }
+
+    container ietf-acl {
+      container ingress {
+        uses vpp-acl:ietf-acl-base-attributes;
+      }
+      container egress {
+        uses vpp-acl:ietf-acl-base-attributes;
+      }
     }
   }
 

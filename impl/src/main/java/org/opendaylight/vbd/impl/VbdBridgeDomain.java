@@ -15,12 +15,15 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -131,6 +134,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private static final int DESTINATION_VPP_INDEX = 1;
     private static final short VLAN_TAG_INDEX_ZERO = 0;
     private static final int MAXLEN = 8;
+    private final DataBroker databroker;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
 
@@ -142,10 +146,12 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private TopologyVbridgeAugment config;
     private final String bridgeDomainName;
     private final String iiBridgeDomainOnVPPRest;
+    private final byte NODE_CONNECTION_TIMER = 60; // seconds
     private Multimap<NodeId, KeyedInstanceIdentifier<Node, NodeKey>> nodesToVpps = ArrayListMultimap.create();
 
     private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                             final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
+        this.databroker = Preconditions.checkNotNull(dataBroker);
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
         this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
 
@@ -483,9 +489,18 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
             case WRITE:
                 LOG.debug("Topology {} node {} created", PPrint.topology(topology), nodeMod.getIdentifier());
                 final int numberVppsBeforeAddition = nodesToVpps.keySet().size();
-                final Node newNode = nodeMod.getDataAfter();
+                final Node newNode = Preconditions.checkNotNull(nodeMod.getDataAfter());
                 try {
-                    createNode(newNode).get();
+                    final SettableFuture<Boolean> futureNodeStatus = SettableFuture.create();
+                    new NodeSpotter(newNode, futureNodeStatus, databroker);
+                    if (futureNodeStatus.get(NODE_CONNECTION_TIMER, TimeUnit.SECONDS)) {
+                        LOG.debug("Node {} is connected, creating ...", newNode.getNodeId());
+                        createNode(newNode).get();
+                    }
+                    else {
+                        LOG.debug("Failed while connecting to node {}", newNode.getNodeId());
+                        return;
+                    }
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.warn("Bridge domain {} was not created on node {}. Further processing is cancelled.",
                             java.util.Optional.ofNullable(topology)
@@ -494,6 +509,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                                 .map(id -> id.getValue()),
                             newNode.getNodeId().getValue(), e);
                     return;
+                } catch (TimeoutException e) {
+                    LOG.warn("Node {} was not connected within {} seconds. Check node configuration and connectivity to proceed",
+                            newNode.getNodeId(), NODE_CONNECTION_TIMER);
                 }
                 if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
                     final int numberVppsAfterAddition = nodesToVpps.keySet().size();

@@ -373,10 +373,11 @@ final class VppModifier {
                                      final Integer vxlanTunnelId) {
         final Vxlan vxlanData = prepareVxlan(ipSrc, ipDst);
         final Interface intfData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
-
-        LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
+        LOG.debug("Interface data: {}", intfData);
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
+        LOG.trace("Mountpoint: {}", vppDataBroker);
         if (vppDataBroker != null) {
+            LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
             final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class, new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));

@@ -15,6 +15,8 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.bridge.domains.BridgeDomain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +88,7 @@ final class VppModifier {
     private final String bridgeDomainName;
     private final VbdBridgeDomain vbdBridgeDomain;
     private TopologyVbridgeAugment config;
-    private final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.bridge.domains.BridgeDomain> iiBridgeDomainOnVPP;
+    private final InstanceIdentifier<BridgeDomain> iiBridgeDomainOnVPP;
 
     VppModifier(final MountPointService mountService, final String bridgeDomainName, final VbdBridgeDomain vbdBridgeDomain) {
         this.mountService = mountService;
@@ -94,7 +96,7 @@ final class VppModifier {
         this.bridgeDomainName = bridgeDomainName;
         this.iiBridgeDomainOnVPP = InstanceIdentifier.create(Vpp.class)
                 .child(BridgeDomains.class)
-                .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.bridge.domains.BridgeDomain.class, new BridgeDomainKey(bridgeDomainName));
+                .child(BridgeDomain.class, new BridgeDomainKey(bridgeDomainName));
     }
 
     Optional<ListenableFuture<Void>> deleteBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
@@ -105,7 +107,7 @@ final class VppModifier {
             return Optional.absent();
         }
 
-        deleteSupportingInterfaces(iiToVpp, vppDataBroker);
+        //deleteSupportingInterfaces(iiToVpp, vppDataBroker); remove just bridge domain
 
         final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
 
@@ -343,25 +345,25 @@ final class VppModifier {
         final Interface2 augIntf = intf.getAugmentation(Interface2.class);
 
         if (augIntf == null) {
-            LOG.trace("Cannot get Interface2 augmentation for intf {}", intf);
+            LOG.warn("Cannot get Interface2 augmentation for intf {}", intf);
             return Optional.absent();
         }
 
         final Ipv4 ipv4 = augIntf.getIpv4();
         if (ipv4 == null) {
-            LOG.debug("Ipv4 address for interface {} on node {} is null!", augIntf, PPrint.node(iiToVpp));
+            LOG.warn("Ipv4 address for interface {} on node {} is null!", augIntf, PPrint.node(iiToVpp));
             return Optional.absent();
         }
 
         final List<Address> addresses = ipv4.getAddress();
         if (addresses == null || addresses.isEmpty()) {
-            LOG.debug("Ipv4 addresses list is empty for intf {} on node {}", augIntf, PPrint.node(iiToVpp));
+            LOG.warn("Ipv4 addresses list is empty for intf {} on node {}", augIntf, PPrint.node(iiToVpp));
             return Optional.absent();
         }
 
         final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
         if (ip == null) {
-            LOG.debug("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
+            LOG.warn("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
             return Optional.absent();
         }
 
@@ -373,28 +375,35 @@ final class VppModifier {
                                      final Integer vxlanTunnelId) {
         final Vxlan vxlanData = prepareVxlan(ipSrc, ipDst);
         final Interface intfData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
-
-        LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
+        LOG.debug("Interface data: {}", intfData);
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
+        LOG.trace("Mountpoint: {}", vppDataBroker);
         if (vppDataBroker != null) {
-            final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
+            LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class, new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
-            wTx.put(LogicalDatastoreType.CONFIGURATION, iiToInterface, intfData);
+            try {
+                final WriteTransaction wTx = vppDataBroker.newWriteOnlyTransaction();
+                wTx.put(LogicalDatastoreType.CONFIGURATION, iiToInterface, intfData);
+                LOG.debug("Submitting new interface to config store...");
+                final CheckedFuture<Void, TransactionCommitFailedException> future = wTx.submit();
+                Futures.addCallback(future, new FutureCallback<Void>() {
+                    @Override
+                    public void onSuccess(@Nullable Void result) {
+                        LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iiToVpp));
+                    }
 
-            LOG.debug("Submitting new interface to config store...");
-
-            Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
-                @Override
-                public void onSuccess(@Nullable Void result) {
-                    LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iiToVpp));
-                }
-
-                @Override
-                public void onFailure(@Nonnull Throwable t) {
-                    LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iiToVpp), t);
-                }
-            });
+                    @Override
+                    public void onFailure(@Nonnull Throwable t) {
+                        LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iiToVpp), t);
+                    }
+                });
+            }
+            catch (IllegalStateException e) {
+                // Workaround for netconf
+                LOG.error("Assuming netconf transaction error, restarting transaction ...", e.getMessage());
+                createVirtualInterfaceOnVpp(ipSrc, ipDst, iiToVpp, vxlanTunnelId);
+            }
         } else {
             LOG.warn("Writing virtual interface {} to VPP {} wasn't successful because data broker is missing", VbdUtil.provideVxlanId(vxlanTunnelId), iiToVpp);
         }
@@ -464,8 +473,7 @@ final class VppModifier {
         return Futures.immediateFailedFuture(new IllegalStateException("Data broker for vpp is missing"));
     }
 
-    private org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.bridge.domains.BridgeDomain
-    prepareNewBridgeDomainData() {
+    private BridgeDomain prepareNewBridgeDomainData() {
         final BridgeDomainBuilder bridgeDomainBuilder = new BridgeDomainBuilder(config);
         bridgeDomainBuilder.setName(bridgeDomainName);
         return bridgeDomainBuilder.build();

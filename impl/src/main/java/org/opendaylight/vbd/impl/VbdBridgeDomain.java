@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -131,6 +132,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private static final int DESTINATION_VPP_INDEX = 1;
     private static final short VLAN_TAG_INDEX_ZERO = 0;
     private static final int MAXLEN = 8;
+    private final DataBroker databroker;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
 
@@ -146,6 +148,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
     private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                             final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
+        this.databroker = Preconditions.checkNotNull(dataBroker);
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
         this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
 
@@ -485,7 +488,16 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 final int numberVppsBeforeAddition = nodesToVpps.keySet().size();
                 final Node newNode = nodeMod.getDataAfter();
                 try {
-                    createNode(newNode).get();
+                    final SettableFuture<Boolean> futureNodeStatus = SettableFuture.create();
+                    new NodeSpotterListener(newNode, futureNodeStatus, databroker);
+                    if (futureNodeStatus.get()) {
+                        LOG.debug("Node {} is connected, creating ...", newNode);
+                        createNode(newNode).get();
+                    }
+                    else {
+                        LOG.debug("Failed while connecting to node {}", newNode);
+                        return;
+                    }
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.warn("Bridge domain {} was not created on node {}. Further processing is cancelled.",
                             java.util.Optional.ofNullable(topology)

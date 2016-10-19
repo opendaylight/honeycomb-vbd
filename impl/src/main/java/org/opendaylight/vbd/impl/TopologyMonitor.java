@@ -42,6 +42,7 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
+import org.opendaylight.yangtools.yang.data.api.schema.tree.ModifiedNodeDoesNotExistException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,14 +102,18 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
     }
 
     private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
-        final VbdBridgeDomain prev = domains.remove(topology.getKey());
-        if (prev == null) {
-            LOG.warn("No domain for {}, not restarting", PPrint.topology(topology));
-            return;
+        try {
+            LOG.warn("Restarting domain {}", PPrint.topology(topology));
+            final VbdBridgeDomain prev = domains.get(topology.getKey());
+            if (prev != null) {
+                prev.forceStop();
+            }
+            // TODO Wait till next try
+            Thread.sleep(3000);
+            startDomain(topology);
+        } catch (InterruptedException e) {
+            LOG.warn("Thread interrupted to ", e);
         }
-
-        prev.forceStop();
-        startDomain(topology);
     }
 
     @GuardedBy("this")
@@ -130,7 +135,8 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             @Override
             public void onTransactionChainFailed(final TransactionChain<?, ?> chain,
                                                  final AsyncTransaction<?, ?> transaction, final Throwable cause) {
-                LOG.warn("Bridge domain for topology {} failed, restarting it", PPrint.topology(topology), cause);
+                LOG.warn("Bridge domain for topology {} failed, restarting it. Cause: {}", PPrint.topology(topology),
+                        cause);
                 restartDomain(topology);
             }
         });

@@ -373,7 +373,7 @@ final class VppModifier {
                                      final Integer vxlanTunnelId) {
         final Vxlan vxlanData = prepareVxlan(ipSrc, ipDst);
         final Interface intfData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
-
+        LOG.debug("Interface data: {}", intfData);
         LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})", intfData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(), ipDst.getValue(), vxlanTunnelId);
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {

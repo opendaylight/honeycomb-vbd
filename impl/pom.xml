@@ -44,6 +44,12 @@
       <artifactId>vbd-api</artifactId>
     </dependency>
 
+  <dependency>
+      <groupId>org.opendaylight.mdsal</groupId>
+      <artifactId>mdsal-singleton-common-api</artifactId>
+      <version>2.1.1-SNAPSHOT</version>
+  </dependency>
+
     <!-- Testing Dependencies -->
     <dependency>
       <groupId>junit</groupId>

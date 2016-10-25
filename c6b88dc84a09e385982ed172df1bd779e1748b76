@@ -1,0 +1,8 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: Ryan Goulding <ryandgoulding@gmail.com>
+Code-Review+2: Wojciech Dec <wdec@cisco.com>
+Submitted-by: Wojciech Dec <wdec@cisco.com>
+Submitted-at: Tue, 25 Oct 2016 08:55:26 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/47160
+Project: honeycomb/vbd
+Branch: refs/heads/master

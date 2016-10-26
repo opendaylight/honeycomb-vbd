@@ -25,8 +25,7 @@
   <feature name='odl-vbd' version='${project.version}' description='OpenDaylight :: vbd'>
     <feature version='${mdsal.version}'>odl-mdsal-binding</feature>
     <feature version='${project.version}'>odl-vbd-api</feature>
-    <feature version='${netconf.version}'>odl-netconf-connector-ssh</feature>
-    <feature version='${netconf.version}'>odl-netconf-topology</feature>
+    <feature version='${netconf.version}'>odl-netconf-clustered-topology</feature>
     <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-impl/{{VERSION}}</bundle>
     <configfile finalname="${configfile.directory}/vbd.xml">mvn:org.opendaylight.honeycomb.vbd/vbd-impl/{{VERSION}}/xml/config</configfile>
   </feature>

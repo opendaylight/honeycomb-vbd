@@ -22,6 +22,30 @@
       "revId": "aa2b341b59ff1f2632b5d6686990e474bf75e854",
       "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_119ffb60",
+        "filename": "impl/pom.xml",
+        "patchSetId": 1
+      },
+      "lineNbr": 51,
+      "author": {
+        "id": 2106
+      },
+      "writtenOn": "2016-10-28T08:07:42Z",
+      "side": 1,
+      "message": "After the merge of https://git.opendaylight.org/gerrit/47517 the the carbon merge job fails without this dependency. I\u0027m not sure whether this is the best place for it, but it is needed somewhere...",
+      "parentUuid": "3a65312a_f1e35f31",
+      "range": {
+        "startLine": 47,
+        "startChar": 0,
+        "endLine": 51,
+        "endChar": 15
+      },
+      "revId": "aa2b341b59ff1f2632b5d6686990e474bf75e854",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
     }
   ]
 }

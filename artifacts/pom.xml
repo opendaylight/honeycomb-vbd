@@ -12,7 +12,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-artifacts</artifactId>
-  <version>1.0.1-SNAPSHOT</version>
+  <version>1.0.1-Boron-SR1</version>
   <packaging>pom</packaging>
 
   <dependencyManagement>
@@ -20,34 +20,34 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-api</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1-Boron-SR1</version>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-impl</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1-Boron-SR1</version>
       </dependency>
       <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>vbd-impl</artifactId>
           <type>xml</type>
           <classifier>config</classifier>
-          <version>1.0.1-SNAPSHOT</version>
+          <version>1.0.1-Boron-SR1</version>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-ui-bundle</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1-Boron-SR1</version>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-ui-module</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1-Boron-SR1</version>
       </dependency>
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-features</artifactId>
-        <version>1.0.1-SNAPSHOT</version>
+        <version>1.0.1-Boron-SR1</version>
         <classifier>features</classifier>
         <type>xml</type>
       </dependency>

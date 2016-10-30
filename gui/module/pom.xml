@@ -12,13 +12,13 @@
   <parent>
     <groupId>org.opendaylight.mdsal</groupId>
     <artifactId>binding-parent</artifactId>
-    <version>0.9.1-SNAPSHOT</version>
+    <version>0.9.1-Boron-SR1</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-ui-module</artifactId>
-  <version>1.0.1-SNAPSHOT</version>
+  <version>1.0.1-Boron-SR1</version>
   <name>${project.artifactId}</name>
   <description>VPP UI Module Resources</description>
   <packaging>jar</packaging>

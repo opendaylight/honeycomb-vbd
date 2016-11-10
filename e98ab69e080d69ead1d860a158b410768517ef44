@@ -1,0 +1,7 @@
+Code-Review+2: Wojciech Dec <wdec@cisco.com>
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Submitted-by: Ed Warnicke <hagbard@gmail.com>
+Submitted-at: Thu, 10 Nov 2016 19:43:55 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/48231
+Project: honeycomb/vbd
+Branch: refs/heads/master

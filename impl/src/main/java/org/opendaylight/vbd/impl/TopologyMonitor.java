@@ -101,14 +101,17 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
     }
 
     private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
-        final VbdBridgeDomain prev = domains.remove(topology.getKey());
-        if (prev == null) {
-            LOG.warn("No domain for {}, not restarting", PPrint.topology(topology));
-            return;
+        try {
+            LOG.warn("Restarting domain {}", PPrint.topology(topology));
+            final VbdBridgeDomain prev = domains.get(topology.getKey());
+            if (prev != null) {
+                prev.forceStop();
+            }
+            Thread.sleep(4000); // Wait some time till the next try
+            startDomain(topology);
+        } catch (InterruptedException e) {
+            LOG.warn("Thread interrupted to ... ", e);
         }
-
-        prev.forceStop();
-        startDomain(topology);
     }
 
     @GuardedBy("this")
@@ -130,7 +133,8 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             @Override
             public void onTransactionChainFailed(final TransactionChain<?, ?> chain,
                                                  final AsyncTransaction<?, ?> transaction, final Throwable cause) {
-                LOG.warn("Bridge domain for topology {} failed, restarting it", PPrint.topology(topology), cause);
+                LOG.warn("Bridge domain for topology {} failed, restarting it. Cause: {}", PPrint.topology(topology),
+                        cause.getMessage());
                 restartDomain(topology);
             }
         });

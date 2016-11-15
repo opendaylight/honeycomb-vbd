@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 import javax.annotation.Nonnull;
@@ -38,6 +39,7 @@ import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev1
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.SVlan;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.dot1q.tag.or.any.Dot1qTagBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
@@ -131,6 +133,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private static final int DESTINATION_VPP_INDEX = 1;
     private static final short VLAN_TAG_INDEX_ZERO = 0;
     private static final int MAXLEN = 8;
+    private final DataBroker databroker;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
 
@@ -142,10 +145,12 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private TopologyVbridgeAugment config;
     private final String bridgeDomainName;
     private final String iiBridgeDomainOnVPPRest;
+    @SuppressWarnings("FieldCanBeLocal")
     private Multimap<NodeId, KeyedInstanceIdentifier<Node, NodeKey>> nodesToVpps = ArrayListMultimap.create();
 
     private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                             final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
+        this.databroker = Preconditions.checkNotNull(dataBroker);
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
         this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
 
@@ -268,6 +273,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     }
 
     synchronized void forceStop() {
+        // TODO better be to return future
         LOG.info("Bridge domain {} for {} going down", this, PPrint.topology(topology));
         reg.close();
         chain.close();
@@ -284,7 +290,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private void deleteBridgeDomain() {
         LOG.debug("Deleting entire bridge domain {}", bridgeDomainName);
         final Collection<KeyedInstanceIdentifier<Node, NodeKey>> vppNodes = nodesToVpps.values();
-        vppNodes.forEach(vppModifier::deleteBridgeDomain);
+        vppNodes.forEach(vppModifier::deleteBridgeDomainFromVppNode);
         nodesToVpps.clear();
     }
 
@@ -367,7 +373,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         LOG.debug("Removing node {} from bridge domain {}", PPrint.node(vppNode), bridgeDomainName);
 
         try {
-            final Optional<ListenableFuture<Void>> deleteFutureOp = vppModifier.deleteBridgeDomain(vppNode);
+            final Optional<ListenableFuture<Void>> deleteFutureOp = vppModifier.deleteBridgeDomainFromVppNode(vppNode);
             if (deleteFutureOp.isPresent()) {
                 deleteFutureOp.get().get();
             }
@@ -401,10 +407,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
     @Override
     public synchronized void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<Topology>> changes) {
-        for (DataTreeModification<Topology> c : changes) {
-            LOG.debug("Domain {} for {} processing change {}", this, PPrint.topology(topology), c);
-
-            final DataObjectModification<Topology> mod = c.getRootNode();
+        for (DataTreeModification<Topology> change : changes) {
+            LOG.debug("Domain {} for {} processing change {}", this.bridgeDomainName, PPrint.topology(topology), change.getClass());
+            final DataObjectModification<Topology> mod = change.getRootNode();
             switch (mod.getModificationType()) {
                 case DELETE:
                     LOG.debug("Topology {} deleted, expecting shutdown", PPrint.topology(topology));
@@ -467,6 +472,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 if (deletedNode != null) {
                     final KeyedInstanceIdentifier<Node, NodeKey> vppIID = nodesToVpps.get(deletedNode.getNodeId()).iterator().next();
                     final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
+                    LOG.debug("Removing node from BD. Node: {}. backingNODE: {}", vppIID, backingNodeIID);
                     removeNodeFromBridgeDomain(vppIID, backingNodeIID);
                 } else {
                     LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
@@ -484,14 +490,18 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 LOG.debug("Topology {} node {} created", PPrint.topology(topology), nodeMod.getIdentifier());
                 final int numberVppsBeforeAddition = nodesToVpps.keySet().size();
                 final Node newNode = nodeMod.getDataAfter();
+                if (newNode == null) {
+                    LOG.warn("Node {} is null", nodeMod.getIdentifier());
+                    return;
+                }
                 try {
                     createNode(newNode).get();
                 } catch (InterruptedException | ExecutionException e) {
                     LOG.warn("Bridge domain {} was not created on node {}. Further processing is cancelled.",
                             java.util.Optional.ofNullable(topology)
                                 .map(t -> t.firstKeyOf(Topology.class))
-                                .map(k -> k.getTopologyId())
-                                .map(id -> id.getValue()),
+                                .map(TopologyKey::getTopologyId)
+                                .map(Uri::getValue),
                             newNode.getNodeId().getValue(), e);
                     return;
                 }
@@ -691,19 +701,18 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
             //writing v3po:vxlan container to existing node
             vppModifier.createVirtualInterfaceOnVpp(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp, dstVxlanTunnelId);
-
         }
     }
 
     private void addLinkBetweenTerminationPoints(final NodeId newVpp, final NodeId odlVpp,
                                                  final int srcVxlanTunnelId, final int dstVxlanTunnelId,
                                                  final String distinguisher) {
-
         final String linkIdStr = newVpp.getValue() + "-" + distinguisher + "-" + odlVpp.getValue();
         final LinkId linkId = new LinkId(linkIdStr);
         final KeyedInstanceIdentifier<Link, LinkKey> iiToLink = topology.child(Link.class, new LinkKey(linkId));
         final WriteTransaction wTx = chain.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.OPERATIONAL, iiToLink, prepareLinkData(newVpp, odlVpp, linkId, srcVxlanTunnelId, dstVxlanTunnelId), true);
+        wTx.put(LogicalDatastoreType.OPERATIONAL, iiToLink, prepareLinkData(newVpp, odlVpp, linkId, srcVxlanTunnelId,
+                dstVxlanTunnelId), true);
         wTx.submit();
     }
 
@@ -732,14 +741,28 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         List<ListenableFuture<Void>> createdNodesFuture = new ArrayList<>();
         for (SupportingNode supportingNode : node.getSupportingNode()) {
             final NodeId nodeMount = supportingNode.getNodeRef();
-            final TopologyId topologyMount = supportingNode.getTopologyRef();
-
-            final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp = InstanceIdentifier.create(NetworkTopology.class)
-                .child(Topology.class, new TopologyKey(topologyMount))
-                .child(Node.class, new NodeKey(nodeMount));
-            nodesToVpps.put(node.getNodeId(), iiToVpp);
-            ListenableFuture<Void> addVppToBridgeDomainFuture = vppModifier.addVppToBridgeDomain(iiToVpp);
-            createdNodesFuture.add(addSupportingBridgeDomain(addVppToBridgeDomainFuture, node));
+            final VbdNetconfConnectionProbe probe = new VbdNetconfConnectionProbe(supportingNode.getNodeRef(), databroker);
+            try {
+                // Verify netconf connection
+                boolean connectionReady = probe.startProbing();
+                if (connectionReady) {
+                    LOG.debug("Node {} is connected, creating ...", supportingNode.getNodeRef());
+                    final TopologyId topologyMount = supportingNode.getTopologyRef();
+                    final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp = InstanceIdentifier.create(NetworkTopology.class)
+                            .child(Topology.class, new TopologyKey(topologyMount))
+                            .child(Node.class, new NodeKey(nodeMount));
+                    nodesToVpps.put(node.getNodeId(), iiToVpp);
+                    ListenableFuture<Void> addVppToBridgeDomainFuture = vppModifier.addVppToBridgeDomain(iiToVpp);
+                    createdNodesFuture.add(addSupportingBridgeDomain(addVppToBridgeDomainFuture, node));
+                } else {
+                    LOG.debug("Failed while connecting to node {}", supportingNode.getNodeRef());
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                LOG.warn("Exception while processing node {} ... ", supportingNode.getNodeRef(), e);
+            } catch (TimeoutException e) {
+                LOG.warn("Node {} was not connected within {} seconds. Check node configuration and connectivity to proceed",
+                        supportingNode.getNodeRef(), VbdNetconfConnectionProbe.NODE_CONNECTION_TIMER);
+            }
         }
         // configure all or nothing
         return Futures.transform(Futures.allAsList(createdNodesFuture), new Function<List<Void>, Void>() {
@@ -748,6 +771,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
             public Void apply(List<Void> input) {
                 return null;
             }
+
         });
     }
 

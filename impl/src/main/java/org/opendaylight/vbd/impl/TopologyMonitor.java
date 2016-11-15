@@ -101,14 +101,18 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
     }
 
     private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
-        final VbdBridgeDomain prev = domains.remove(topology.getKey());
-        if (prev == null) {
-            LOG.warn("No domain for {}, not restarting", PPrint.topology(topology));
-            return;
+        // TODO possible loop, needs better handling but works for now
+        try {
+            LOG.warn("Restarting domain {}", PPrint.topology(topology));
+            final VbdBridgeDomain prev = domains.get(topology.getKey());
+            if (prev != null) {
+                prev.forceStop();
+            }
+            Thread.sleep(4000); // Wait some time till the next try
+            startDomain(topology);
+        } catch (InterruptedException e) {
+            LOG.warn("Thread interrupted to ... ", e);
         }
-
-        prev.forceStop();
-        startDomain(topology);
     }
 
     @GuardedBy("this")
@@ -130,7 +134,8 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             @Override
             public void onTransactionChainFailed(final TransactionChain<?, ?> chain,
                                                  final AsyncTransaction<?, ?> transaction, final Throwable cause) {
-                LOG.warn("Bridge domain for topology {} failed, restarting it", PPrint.topology(topology), cause);
+                LOG.warn("Bridge domain for topology {} failed, restarting it. Cause: {}", PPrint.topology(topology),
+                        cause.getMessage());
                 restartDomain(topology);
             }
         });
@@ -139,7 +144,7 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             domain = VbdBridgeDomain.create(dataBroker, mountService, topology, chain, tunnelIdAllocator);
         } catch (Exception e) {
             updateStatus(PPrint.topology(topology), BridgeDomainStatus.Failed);
-            LOG.warn("VBD failed to create/start bridge domain {}", PPrint.topology(topology), e);
+            LOG.warn("VBD failed to create/startProbing bridge domain {}", PPrint.topology(topology), e);
             return;
         }
         domains.put(topology.getKey(), domain);

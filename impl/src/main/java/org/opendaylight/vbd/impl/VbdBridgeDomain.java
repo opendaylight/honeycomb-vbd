@@ -8,6 +8,9 @@
 
 package org.opendaylight.vbd.impl;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -133,7 +136,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private static final int DESTINATION_VPP_INDEX = 1;
     private static final short VLAN_TAG_INDEX_ZERO = 0;
     private static final int MAXLEN = 8;
-    private final DataBroker databroker;
+    private final DataBroker dataBroker;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
 
@@ -150,9 +153,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
     private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                             final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
-        this.databroker = Preconditions.checkNotNull(dataBroker);
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
-        this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
+        this.vppModifier = new VppModifier(dataBroker, mountService, bridgeDomainName, this);
 
         this.topology = Preconditions.checkNotNull(topology);
         this.chain = Preconditions.checkNotNull(chain);
@@ -303,10 +306,10 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         final ReadOnlyTransaction rTx = chain.newReadOnlyTransaction();
         return Futures.transform(rTx.read(LogicalDatastoreType.OPERATIONAL, topology), new AsyncFunction<Optional<Topology>, List<InstanceIdentifier<Link>>>() {
             @Override
-            public ListenableFuture<List<InstanceIdentifier<Link>>> apply(Optional<Topology> result) throws Exception {
+            public ListenableFuture<List<InstanceIdentifier<Link>>> apply(@Nonnull Optional<Topology> result) throws Exception {
                 final List<InstanceIdentifier<Link>> prunableLinks = new ArrayList<>();
 
-                if (result != null && result.isPresent()) {
+                if (result.isPresent()) {
                     final List<Link> links = result.get().getLink();
 
                     for (final Link link : links) {
@@ -474,6 +477,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                     final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
                     LOG.debug("Removing node from BD. Node: {}. backingNODE: {}", vppIID, backingNodeIID);
                     removeNodeFromBridgeDomain(vppIID, backingNodeIID);
+                    if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+                        removeVxlanInterfaces(deletedNode.getNodeId());
+                    }
                 } else {
                     LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
                 }
@@ -508,7 +514,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
                     final int numberVppsAfterAddition = nodesToVpps.keySet().size();
                     if ((numberVppsBeforeAddition <= numberVppsAfterAddition) && (numberVppsBeforeAddition >= 1)) {
-                        addTunnel(newNode.getNodeId());
+                        addVxlanTunnel(newNode.getNodeId());
                     }
                 } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
                     final NodeVbridgeVlanAugment vlanAug = newNode.getAugmentation(NodeVbridgeVlanAugment.class);
@@ -668,7 +674,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 .collect(Collectors.toList());
     }
 
-    private void addTunnel(final NodeId sourceNode) {
+    private void addVxlanTunnel(final NodeId sourceNode) {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
 
         LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode.getValue());
@@ -701,6 +707,26 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
             //writing v3po:vxlan container to existing node
             vppModifier.createVirtualInterfaceOnVpp(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp, dstVxlanTunnelId);
+        }
+    }
+
+    private void removeVxlanInterfaces(final NodeId sourceNode) {
+        final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
+        for (final NodeId dstNode : getNodePeers(sourceNode)) {
+            final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
+            final List<Ipv4AddressNoZone> endpoints = getTunnelEndpoints(iiToSrcVpp, iiToDstVpp);
+
+            Preconditions.checkState(endpoints.size() == 2, "Got IP address list with wrong size (should be 2, actual size is "
+                    + endpoints.size() + ")");
+
+            final Ipv4AddressNoZone ipAddressSrcVpp = endpoints.get(SOURCE_VPP_INDEX);
+            final Ipv4AddressNoZone ipAddressDstVpp = endpoints.get(DESTINATION_VPP_INDEX);
+
+            // remove bridge domains from vpp
+            LOG.debug("Removing bridge domain from vxlan tunnel on node {}", sourceNode);
+            vppModifier.deleteVxlanInterface(ipAddressSrcVpp, ipAddressDstVpp, iiToSrcVpp);
+            LOG.debug("Removing bridge domain from vxlan tunnel on node {}", dstNode);
+            vppModifier.deleteVxlanInterface(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp);
         }
     }
 
@@ -741,7 +767,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         List<ListenableFuture<Void>> createdNodesFuture = new ArrayList<>();
         for (SupportingNode supportingNode : node.getSupportingNode()) {
             final NodeId nodeMount = supportingNode.getNodeRef();
-            final VbdNetconfConnectionProbe probe = new VbdNetconfConnectionProbe(supportingNode.getNodeRef(), databroker);
+            final VbdNetconfConnectionProbe probe = new VbdNetconfConnectionProbe(supportingNode.getNodeRef(), dataBroker);
             try {
                 // Verify netconf connection
                 boolean connectionReady = probe.startProbing();

@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "3a65312a_5c566ad3",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 412,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2016-11-16T13:41:35Z",
+      "side": 1,
+      "message": "can be renamed to something more relevant, \"change\" would be better",
+      "range": {
+        "startLine": 412,
+        "startChar": 44,
+        "endLine": 412,
+        "endChar": 45
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_fc465620",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 379,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2016-11-16T13:41:35Z",
+      "side": 1,
+      "message": "add space after the comma",
+      "range": {
+        "startLine": 379,
+        "startChar": 60,
+        "endLine": 379,
+        "endChar": 75
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

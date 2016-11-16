@@ -476,6 +476,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                     final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
                     LOG.debug("Removing node from BD. Node: {}. backingNODE: {}", vppIID, backingNodeIID);
                     removeNodeFromBridgeDomain(vppIID, backingNodeIID);
+                    if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+                        removeBridgeDomainFromVxlanTunnel(deletedNode.getNodeId());
+                    }
                 } else {
                     LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
                 }
@@ -510,7 +513,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
                     final int numberVppsAfterAddition = nodesToVpps.keySet().size();
                     if ((numberVppsBeforeAddition <= numberVppsAfterAddition) && (numberVppsBeforeAddition >= 1)) {
-                        addTunnel(newNode.getNodeId());
+                        addVxlanTunnel(newNode.getNodeId());
                     }
                 } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
                     final NodeVbridgeVlanAugment vlanAug = newNode.getAugmentation(NodeVbridgeVlanAugment.class);
@@ -670,7 +673,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 .collect(Collectors.toList());
     }
 
-    private void addTunnel(final NodeId sourceNode) {
+    private void addVxlanTunnel(final NodeId sourceNode) {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
 
         LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode.getValue());
@@ -703,6 +706,25 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
             //writing v3po:vxlan container to existing node
             vppModifier.createVirtualInterfaceOnVpp(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp, dstVxlanTunnelId);
+        }
+    }
+
+    private void removeBridgeDomainFromVxlanTunnel(final NodeId sourceNode) {
+        final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
+        for (final NodeId dstNode : getNodePeers(sourceNode)) {
+            final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
+            final List<Ipv4AddressNoZone> endpoints = getTunnelEndpoints(iiToSrcVpp, iiToDstVpp);
+
+            Preconditions.checkState(endpoints.size() == 2, "Got IP address list with wrong size (should be 2, actual size is " + endpoints.size() + ")");
+
+            final Ipv4AddressNoZone ipAddressSrcVpp = endpoints.get(SOURCE_VPP_INDEX);
+            final Ipv4AddressNoZone ipAddressDstVpp = endpoints.get(DESTINATION_VPP_INDEX);
+
+            // remove bridge domains from vpp
+            LOG.debug("Removing bridge domain from vxlan tunnel on node {}", sourceNode);
+            vppModifier.deleteVirtualInterfaceBridgeDomain(ipAddressSrcVpp, ipAddressDstVpp, iiToSrcVpp);
+            LOG.debug("Removing bridge domain from vxlan tunnel on node {}", dstNode);
+            vppModifier.deleteVirtualInterfaceBridgeDomain(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp);
         }
     }
 

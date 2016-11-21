@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "3a65312a_836ff6c4",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "The only reason found why bridge domain has to be restarted is from recovery start (all data are already in DS while controller is starting). Sometimes, BD data are read from topology before the appropriate model is loaded (exception can be seen in log). I think it is better to wait a while before next try, otherwise it will spam the log with the same error.\n\nBridge domain status can be read from DS (whether it is started, stopped, failed, etc). \n\nAnyway, this method needs some improvements (for example in some unusual cases it could behave as infinite loop) but I\u0027d like to create separate commit for this.",
+      "parentUuid": "3a65312a_081b051c",
+      "range": {
+        "startLine": 108,
+        "startChar": 21,
+        "endLine": 110,
+        "endChar": 31
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3a65312a_0877853b",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
         "patchSetId": 6
@@ -36,6 +60,30 @@
       "writtenOn": "2016-11-21T08:34:10Z",
       "side": 1,
       "message": "This could also return a future since we\u0027re removing data inside of the method... or make the deletion synchronous by calling get() on submit.",
+      "range": {
+        "startLine": 285,
+        "startChar": 17,
+        "endLine": 285,
+        "endChar": 21
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_83a6d60e",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 285,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "You are right and this could be applied on methods startDomain, restartDomain, completeDomain (in TopologyMonitor) and some other. A pretty big change which is out of scope of this change. I may add a todo here and create a new commit for this.",
+      "parentUuid": "3a65312a_0877853b",
       "range": {
         "startLine": 285,
         "startChar": 17,
@@ -71,6 +119,30 @@
     },
     {
       "key": {
+        "uuid": "3a65312a_63a9fade",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 412,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3a65312a_5c566ad3",
+      "range": {
+        "startLine": 412,
+        "startChar": 44,
+        "endLine": 412,
+        "endChar": 45
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3a65312a_88b555f0",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
         "patchSetId": 6
@@ -82,6 +154,30 @@
       "writtenOn": "2016-11-21T08:34:10Z",
       "side": 1,
       "message": "The method does not really address it\u0027s return type. It can return listenable future (wtx.submit()) or we call .get() on the submission.",
+      "range": {
+        "startLine": 709,
+        "startChar": 12,
+        "endLine": 709,
+        "endChar": 16
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_a3aaf2cf",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 709,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "see my comment above",
+      "parentUuid": "3a65312a_88b555f0",
       "range": {
         "startLine": 709,
         "startChar": 12,
@@ -117,6 +213,30 @@
     },
     {
       "key": {
+        "uuid": "3a65312a_43895e25",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 747,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "Simplified, hope it\u0027s more readable now",
+      "parentUuid": "3a65312a_a877713a",
+      "range": {
+        "startLine": 746,
+        "startChar": 12,
+        "endLine": 747,
+        "endChar": 101
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3a65312a_fc465620",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
         "patchSetId": 6
@@ -140,6 +260,30 @@
     },
     {
       "key": {
+        "uuid": "3a65312a_238c2235",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 379,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "3a65312a_fc465620",
+      "range": {
+        "startLine": 379,
+        "startChar": 60,
+        "endLine": 379,
+        "endChar": 75
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3a65312a_e8a84979",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
         "patchSetId": 6
@@ -151,6 +295,30 @@
       "writtenOn": "2016-11-21T08:34:10Z",
       "side": 1,
       "message": "Careful if it\u0027s assumed that the data were deleted from the datastore at this point.",
+      "range": {
+        "startLine": 385,
+        "startChar": 12,
+        "endLine": 385,
+        "endChar": 26
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_c3d1eefc",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 385,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-11-21T13:08:32Z",
+      "side": 1,
+      "message": "Added callback. This workaround (from line 378) will be removed in following patch anyway.",
+      "parentUuid": "3a65312a_e8a84979",
       "range": {
         "startLine": 385,
         "startChar": 12,

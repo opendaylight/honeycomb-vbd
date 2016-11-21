@@ -2,6 +2,52 @@
   "comments": [
     {
       "key": {
+        "uuid": "3a65312a_081b051c",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 110,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-11-21T08:34:10Z",
+      "side": 1,
+      "message": "Not sure why do we need to put sleep here. Is there any way how to verify that bridge domain is really stopped? If so, maybe we could insert that logic into forceStop() method.",
+      "range": {
+        "startLine": 108,
+        "startChar": 21,
+        "endLine": 110,
+        "endChar": 31
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_0877853b",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 285,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-11-21T08:34:10Z",
+      "side": 1,
+      "message": "This could also return a future since we\u0027re removing data inside of the method... or make the deletion synchronous by calling get() on submit.",
+      "range": {
+        "startLine": 285,
+        "startChar": 17,
+        "endLine": 285,
+        "endChar": 21
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3a65312a_5c566ad3",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
         "patchSetId": 6
@@ -25,6 +71,52 @@
     },
     {
       "key": {
+        "uuid": "3a65312a_88b555f0",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 709,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-11-21T08:34:10Z",
+      "side": 1,
+      "message": "The method does not really address it\u0027s return type. It can return listenable future (wtx.submit()) or we call .get() on the submission.",
+      "range": {
+        "startLine": 709,
+        "startChar": 12,
+        "endLine": 709,
+        "endChar": 16
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_a877713a",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 747,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-11-21T08:34:10Z",
+      "side": 1,
+      "message": "Interesting, how you set futureNodeStatus here.\n\nOptional suggestion:\nIt\u0027s smart, but one would have to study VbdNetconfConnectionProbe code to understand this logic.\nI would rather do the registration/unregistration and probing within one method which would return a future as a result.\n\nHowever,\nIf you like it as it is now, then I\u0027m OK with it too.",
+      "range": {
+        "startLine": 746,
+        "startChar": 12,
+        "endLine": 747,
+        "endChar": 101
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "3a65312a_fc465620",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
         "patchSetId": 6
@@ -41,6 +133,29 @@
         "startChar": 60,
         "endLine": 379,
         "endChar": 75
+      },
+      "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "3a65312a_e8a84979",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 6
+      },
+      "lineNbr": 385,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2016-11-21T08:34:10Z",
+      "side": 1,
+      "message": "Careful if it\u0027s assumed that the data were deleted from the datastore at this point.",
+      "range": {
+        "startLine": 385,
+        "startChar": 12,
+        "endLine": 385,
+        "endChar": 26
       },
       "revId": "63b731888ccffd598762d278f72dda87d6c1893c",
       "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",

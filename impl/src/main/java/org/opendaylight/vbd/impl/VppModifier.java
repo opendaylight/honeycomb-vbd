@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -29,7 +30,6 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
-import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
@@ -65,6 +65,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.UserInterface;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.DataObject;
@@ -81,16 +85,19 @@ final class VppModifier {
     private static final Short DEFAULT_SHG = 1;
 
     private static final Logger LOG = LoggerFactory.getLogger(VppModifier.class);
+    private final DataBroker dataBroker;
     private final MountPointService mountService;
     private final String bridgeDomainName;
     private final VbdBridgeDomain vbdBridgeDomain;
     private TopologyVbridgeAugment config;
     private final InstanceIdentifier<BridgeDomain> iiBridgeDomainOnVPP;
 
-    VppModifier(final MountPointService mountService, final String bridgeDomainName, final VbdBridgeDomain vbdBridgeDomain) {
-        this.mountService = mountService;
-        this.vbdBridgeDomain = vbdBridgeDomain;
-        this.bridgeDomainName = bridgeDomainName;
+    VppModifier(final DataBroker dataBroker, final MountPointService mountService, final String bridgeDomainName,
+                final VbdBridgeDomain vbdBridgeDomain) {
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
+        this.mountService = Preconditions.checkNotNull(mountService);
+        this.vbdBridgeDomain = Preconditions.checkNotNull(vbdBridgeDomain);
+        this.bridgeDomainName = Preconditions.checkNotNull(bridgeDomainName);
         this.iiBridgeDomainOnVPP = InstanceIdentifier.create(Vpp.class)
                 .child(BridgeDomains.class)
                 .child(BridgeDomain.class, new BridgeDomainKey(bridgeDomainName));
@@ -337,25 +344,25 @@ final class VppModifier {
         final Interface2 augIntf = intf.getAugmentation(Interface2.class);
 
         if (augIntf == null) {
-            LOG.warn("Cannot get Interface2 augmentation for intf {}", intf);
+            LOG.debug("Cannot get Interface2 augmentation for intf {}", intf);
             return Optional.absent();
         }
 
         final Ipv4 ipv4 = augIntf.getIpv4();
         if (ipv4 == null) {
-            LOG.warn("Ipv4 address for interface {} on node {} is null!", augIntf, PPrint.node(iiToVpp));
+            LOG.debug("Ipv4 address for interface {} on node {} is null!", augIntf, PPrint.node(iiToVpp));
             return Optional.absent();
         }
 
         final List<Address> addresses = ipv4.getAddress();
         if (addresses == null || addresses.isEmpty()) {
-            LOG.warn("Ipv4 addresses list is empty for interface {} on node {}", augIntf, PPrint.node(iiToVpp));
+            LOG.debug("Ipv4 addresses list is empty for interface {} on node {}", augIntf, PPrint.node(iiToVpp));
             return Optional.absent();
         }
 
         final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
         if (ip == null) {
-            LOG.warn("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
+            LOG.debug("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
             return Optional.absent();
         }
 
@@ -363,69 +370,83 @@ final class VppModifier {
         return Optional.of(ip);
     }
 
-    void createVirtualInterfaceOnVpp(final Ipv4AddressNoZone ipSrc, final Ipv4AddressNoZone ipDst, final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp,
-                                     Integer vxlanTunnelId) {
-        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
+    /**
+     * Create virtual interface and add appropriate bridge domain. If interface already exists
+     * (found by {@link VppModifier#findVxlanTunnelFromIpAddresses(Ipv4AddressNoZone, Ipv4AddressNoZone, DataBroker)}),
+     * only bridge domain is leveraged from input data and written into interface. If interface is missing, it's written
+     * with bridge domain set up.
+     *
+     * @param ipSrc         source ip address
+     * @param ipDst         destination ip address
+     * @param iidToVpp      {@link InstanceIdentifier} to node
+     * @param vxlanTunnelId input id of vxlan tunnel. This id is used only when particular interface does not exist
+     */
+    void createVirtualInterfaceOnVpp(final Ipv4AddressNoZone ipSrc, final Ipv4AddressNoZone ipDst,
+                                     final KeyedInstanceIdentifier<Node, NodeKey> iidToVpp, final Integer vxlanTunnelId) {
+        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iidToVpp, mountService);
         if (vppDataBroker == null) {
             LOG.warn("Writing virtual interface {} to VPP {} wasn't successful because data broker is missing",
-                    VbdUtil.provideVxlanId(vxlanTunnelId), iiToVpp);
+                    VbdUtil.provideVxlanId(vxlanTunnelId), iidToVpp);
             return;
         }
         final Vxlan vxlanData = prepareVxlan(ipSrc, ipDst);
-        // Find existing vxlan interface
         final Integer potentialExistingInterfaceTunnelId = findVxlanTunnelFromIpAddresses(ipSrc, ipDst, vppDataBroker);
+        // Interface exists, add BD only
         if (potentialExistingInterfaceTunnelId != null) {
-            // TODO workaroud for hc
-            LOG.debug("Interface with srcIp {} and dstIp {} found, removing.");
-            final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
-                    = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
-                    new InterfaceKey(VbdUtil.provideVxlanId(potentialExistingInterfaceTunnelId)));
+            LOG.debug("Interface with srcIp {} and dstIp {} found, bridge domain will be added.", ipSrc, ipDst);
+            final Interface interfaceData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
+            final L2 l2Data = interfaceData.getAugmentation(VppInterfaceAugmentation.class).getL2();
+            LOG.trace("L2 data: {}", l2Data);
+            final String vxlanId = VbdUtil.provideVxlanId(potentialExistingInterfaceTunnelId);
+            final InstanceIdentifier<L2> l2Iid = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
+                    new InterfaceKey(vxlanId)).augmentation(VppInterfaceAugmentation.class).child(L2.class).builder().build();
             final ReadWriteTransaction rwTx = new NetconfTransactionHelper()
-                    .prepareTransactionAndDeleteData(vppDataBroker, iiToInterface);
+                    .prepareTransactionAndPutData(vppDataBroker, l2Data, l2Iid);
+            LOG.debug("Submitting new interface BD data to config store...");
             Futures.addCallback(rwTx.submit(), new FutureCallback<Void>() {
 
                 @Override
                 public void onSuccess(@Nullable Void aVoid) {
-                    LOG.trace("Interface removed successfully");
+                    LOG.debug("Writing bridge domain into super virtual interface to {} finished successfully.",
+                            PPrint.node(iidToVpp));
                 }
 
                 @Override
-                public void onFailure(@Nonnull Throwable throwable) {
-                    LOG.trace("Failed to remove interface, cause: {}", throwable.getMessage());
+                public void onFailure(@Nonnull Throwable t) {
+                    LOG.warn("Writing bridge domain into super virtual interface to {} failed.", PPrint.node(iidToVpp), t);
                 }
             });
-            // TunnelId of previous vxlan interface will be used for this one since it is the same interface
-            vxlanTunnelId = potentialExistingInterfaceTunnelId;
         }
-        final Interface interfaceData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
-        LOG.debug("Interface data: {}", interfaceData);
-        LOG.debug("Creating virtual interface ({}) on vpp {} for vxlan tunnel ({} -> {}, id: {})",
-                interfaceData.getKey().getName(), iiToVpp.getKey().getNodeId().getValue(), ipSrc.getValue(),
-                ipDst.getValue(), vxlanTunnelId);
-        final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
-                = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
-                new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
-        final WriteTransaction wTx = new NetconfTransactionHelper()
-                .prepareTransactionAndPutData(vppDataBroker, interfaceData, iiToInterface);
-        LOG.debug("Submitting new interface to config store...");
-        final CheckedFuture<Void, TransactionCommitFailedException> future = wTx.submit();
-        Futures.addCallback(future, new FutureCallback<Void>() {
+        // Interface does not exist, create a new one with BD assigned
+        else {
+            LOG.debug("Interface with srcIp {} and dstIp {} not found, creating a new one with bridge domain attached.");
+            final Interface interfaceData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
+            LOG.trace("Interface data: {}", interfaceData);
+            final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
+                    = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
+                    new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
+            final WriteTransaction wTx = new NetconfTransactionHelper()
+                    .prepareTransactionAndPutData(vppDataBroker, interfaceData, iiToInterface);
+            LOG.debug("Submitting new interface to config store...");
+            Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
 
-            @Override
-            public void onSuccess(@Nullable Void result) {
-                LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iiToVpp));
-            }
+                @Override
+                public void onSuccess(@Nullable Void result) {
+                    LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iidToVpp));
+                }
 
-            @Override
-            public void onFailure(@Nonnull Throwable t) {
-                LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iiToVpp), t);
-            }
-        });
+                @Override
+                public void onFailure(@Nonnull Throwable t) {
+                    LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iidToVpp), t);
+                }
+            });
+        }
     }
 
     /**
-     * Gets all interfaces from vpp, selects vxlan tunnels and finds the one with matching source and destination ip
-     * address. Returns vxlan tunnel index
+     * Get all interfaces from vpp, selects vxlan tunnels and finds the one with matching source ip address, destination
+     * ip address and VNI. Returns vxlan tunnel index or null if such a interface is not present on node mountpoint
+     * belongs to
      *
      * @param srcIp      source ip address
      * @param dstIp      destination ip address
@@ -471,7 +492,7 @@ final class VppModifier {
                     }
                 }
             }
-            LOG.warn("Vxlan tunnel was not found for src ip: {} and dst ip: {}", srcIp, dstIp);
+            LOG.debug("Vxlan tunnel was not found for src ip: {} and dst ip: {}", srcIp, dstIp);
             return null;
         } catch (ReadFailedException e) {
             LOG.warn("Read failed to ... ", e);
@@ -481,13 +502,36 @@ final class VppModifier {
 
     private boolean verifyVni(final VxlanVni providedVni, final Vxlan vxlan) {
         if (providedVni != null) {
-            final TunnelParameters parameters = config.getTunnelParameters();
-            if (parameters instanceof VxlanTunnelParameters) {
-                final VxlanTunnelParameters vxlanParameters = (VxlanTunnelParameters) parameters;
-                final VxlanVni currentVni = vxlanParameters.getVni();
-                return providedVni.equals(currentVni);
+            // Read current bridge domain
+            final InstanceIdentifier<Topology> bridgeDomainIid = InstanceIdentifier.create(NetworkTopology.class)
+                    .child(Topology.class, new TopologyKey(new TopologyId(bridgeDomainName))).builder().build();
+            final ReadWriteTransaction rwTx = dataBroker.newReadWriteTransaction();
+            final CheckedFuture<Optional<Topology>, ReadFailedException> future =
+                    rwTx.read(LogicalDatastoreType.CONFIGURATION, bridgeDomainIid);
+            try {
+                final Optional<Topology> optionalTopology = future.get();
+                if (!optionalTopology.isPresent()) {
+                    // This shouldn't happen
+                    LOG.warn("Bridge domain {} is not present in datastore", bridgeDomainName);
+                    return false;
+                }
+                final Topology bridgeDomain = optionalTopology.get();
+                final TopologyVbridgeAugment augmentation = bridgeDomain.getAugmentation(TopologyVbridgeAugment.class);
+                if (augmentation == null) {
+                    LOG.warn("Bridge domain {} does not contain Vbridge augmentation, vni cannot be verified", bridgeDomainName);
+                    return false;
+                }
+                final TunnelParameters parameters = augmentation.getTunnelParameters();
+                if (parameters instanceof VxlanTunnelParameters) {
+                    final VxlanTunnelParameters vxlanParameters = (VxlanTunnelParameters) parameters;
+                    final VxlanVni currentVni = vxlanParameters.getVni();
+                    return providedVni.equals(currentVni);
+                }
+                return false;
+            } catch (InterruptedException | ExecutionException e) {
+                LOG.warn("Failed to read bridge domain from data store, vni cannot be verified for vxlan {}", vxlan);
+                return false;
             }
-            return false;
         }
         LOG.warn("Cannot verify VNI for vxlan tunnel {}, provided vni is null", vxlan);
         return false;
@@ -621,6 +665,38 @@ final class VppModifier {
 
         return  VxlanTunnel.class.equals(intf.getType())
                 && this.bridgeDomainName.equals(((BridgeBased) interconnection).getBridgeDomain());
+    }
+
+    void deleteVxlanInterface(final Ipv4AddressNoZone srcIp, final Ipv4AddressNoZone dstIp,
+                              final KeyedInstanceIdentifier<Node, NodeKey> vppNodeIid) {
+        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(vppNodeIid, mountService);
+        if (vppDataBroker == null) {
+            LOG.warn("Mountpoint not found for node {}", vppNodeIid);
+            return;
+        }
+        final Integer tunnelId = findVxlanTunnelFromIpAddresses(srcIp, dstIp, vppDataBroker);
+        if (tunnelId == null) {
+            LOG.debug("Vxlan tunnel with source ip {}, destination ip {} and bridge domain {} not found on node {}",
+                    srcIp, dstIp, bridgeDomainName, vppNodeIid);
+            return;
+        }
+        final String vxlanId = VbdUtil.provideVxlanId(tunnelId);
+        final InstanceIdentifier<Interface> interfaceId = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
+                new InterfaceKey(vxlanId)).builder().build();
+        final ReadWriteTransaction rwTx = new NetconfTransactionHelper().prepareTransactionAndDeleteData(vppDataBroker, interfaceId);
+        LOG.debug("Removing bridge domain from vxlan {} on node {}", vxlanId, vppNodeIid);
+        Futures.addCallback(rwTx.submit(), new FutureCallback<Void>() {
+            @Override
+            public void onSuccess(@Nullable Void aVoid) {
+                LOG.debug("Bridge domain successfully removed from vxlan interface on node {}", vppNodeIid);
+            }
+
+            @Override
+            public void onFailure(@Nonnull Throwable throwable) {
+                LOG.warn("Failed to remove bridge domain from interface. Node: {}, cause: {}", vppNodeIid,
+                        throwable.getMessage());
+            }
+        });
     }
 
     // TODO workaround for netconf, remove when fixed

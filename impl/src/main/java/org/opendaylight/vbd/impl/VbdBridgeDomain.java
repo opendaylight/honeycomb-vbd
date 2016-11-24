@@ -8,8 +8,10 @@
 
 package org.opendaylight.vbd.impl;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -17,11 +19,16 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -37,6 +44,7 @@ import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFaile
 import org.opendaylight.vbd.api.VxlanTunnelIdAllocator;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.Dot1qVlanId;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.SVlan;
+import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.dot1q.tag.or.any.Dot1qTag;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.dot1q.tag.or.any.Dot1qTagBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Uri;
@@ -111,17 +119,6 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-
 /**
  * Implementation of a single Virtual Bridge Domain. It is bound to a particular network topology instance, manages
  * bridge members and projects state into the operational data store.
@@ -133,7 +130,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     private static final int DESTINATION_VPP_INDEX = 1;
     private static final short VLAN_TAG_INDEX_ZERO = 0;
     private static final int MAXLEN = 8;
-    private final DataBroker databroker;
+    private final DataBroker dataBroker;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
 
@@ -150,9 +147,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
     private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                             final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
-        this.databroker = Preconditions.checkNotNull(dataBroker);
+        this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
-        this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
+        this.vppModifier = new VppModifier(dataBroker, mountService, bridgeDomainName, this);
 
         this.topology = Preconditions.checkNotNull(topology);
         this.chain = Preconditions.checkNotNull(chain);
@@ -303,10 +300,10 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         final ReadOnlyTransaction rTx = chain.newReadOnlyTransaction();
         return Futures.transform(rTx.read(LogicalDatastoreType.OPERATIONAL, topology), new AsyncFunction<Optional<Topology>, List<InstanceIdentifier<Link>>>() {
             @Override
-            public ListenableFuture<List<InstanceIdentifier<Link>>> apply(Optional<Topology> result) throws Exception {
+            public ListenableFuture<List<InstanceIdentifier<Link>>> apply(@Nonnull Optional<Topology> result) throws Exception {
                 final List<InstanceIdentifier<Link>> prunableLinks = new ArrayList<>();
 
-                if (result != null && result.isPresent()) {
+                if (result.isPresent()) {
                     final List<Link> links = result.get().getLink();
 
                     for (final Link link : links) {
@@ -474,6 +471,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                     final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
                     LOG.debug("Removing node from BD. Node: {}. backingNODE: {}", vppIID, backingNodeIID);
                     removeNodeFromBridgeDomain(vppIID, backingNodeIID);
+                    if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+                        removeVxlanInterfaces(deletedNode.getNodeId());
+                    }
                 } else {
                     LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
                 }
@@ -508,7 +508,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
                     final int numberVppsAfterAddition = nodesToVpps.keySet().size();
                     if ((numberVppsBeforeAddition <= numberVppsAfterAddition) && (numberVppsBeforeAddition >= 1)) {
-                        addTunnel(newNode.getNodeId());
+                        addVxlanTunnel(newNode.getNodeId());
                     }
                 } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
                     final NodeVbridgeVlanAugment vlanAug = newNode.getAugmentation(NodeVbridgeVlanAugment.class);
@@ -525,8 +525,8 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
     private void modifyTerminationPoint(final DataObjectModification<TerminationPoint> nodeChild, final NodeId nodeId) {
         final TerminationPoint terminationPoint = nodeChild.getDataAfter();
-        final TerminationPointVbridgeAugment termPointVbridgeAug = terminationPoint.getAugmentation(TerminationPointVbridgeAugment.class);
-        if (termPointVbridgeAug != null) {
+        if (terminationPoint != null && terminationPoint.getAugmentation(TerminationPointVbridgeAugment.class) != null) {
+            final TerminationPointVbridgeAugment termPointVbridgeAug = terminationPoint.getAugmentation(TerminationPointVbridgeAugment.class);
             final Collection<KeyedInstanceIdentifier<Node, NodeKey>> instanceIdentifiersVPP = nodesToVpps.get(nodeId);
             //TODO: probably iterate via all instance identifiers.
             if (!instanceIdentifiersVPP.isEmpty()) {
@@ -567,13 +567,13 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
     }
 
     private Tags createTags(VlanId vlan) {
-        return new TagsBuilder().setTag(Arrays.asList(new TagBuilder().setIndex(VLAN_TAG_INDEX_ZERO)
-            .setDot1qTag(new Dot1qTagBuilder().setTagType(SVlan.class)
-                .setVlanId(
-                        new org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.dot1q.tag.or.any.Dot1qTag.VlanId(
-                                new Dot1qVlanId(vlan.getValue())))
-                .build())
-            .build())).build();
+        return new TagsBuilder().setTag(Collections.singletonList(new TagBuilder().setIndex(VLAN_TAG_INDEX_ZERO)
+                .setDot1qTag(new Dot1qTagBuilder().setTagType(SVlan.class)
+                        .setVlanId(
+                                new Dot1qTag.VlanId(
+                                        new Dot1qVlanId(vlan.getValue())))
+                        .build())
+                .build())).build();
     }
 
     private SubInterface createSubInterface(final VlanId vlan, final Class<? extends VlanType> vlanType) {
@@ -668,7 +668,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 .collect(Collectors.toList());
     }
 
-    private void addTunnel(final NodeId sourceNode) {
+    private void addVxlanTunnel(final NodeId sourceNode) {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
 
         LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode.getValue());
@@ -701,6 +701,26 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
             //writing v3po:vxlan container to existing node
             vppModifier.createVirtualInterfaceOnVpp(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp, dstVxlanTunnelId);
+        }
+    }
+
+    private void removeVxlanInterfaces(final NodeId sourceNode) {
+        final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
+        for (final NodeId dstNode : getNodePeers(sourceNode)) {
+            final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
+            final List<Ipv4AddressNoZone> endpoints = getTunnelEndpoints(iiToSrcVpp, iiToDstVpp);
+
+            Preconditions.checkState(endpoints.size() == 2, "Got IP address list with wrong size (should be 2, actual size is "
+                    + endpoints.size() + ")");
+
+            final Ipv4AddressNoZone ipAddressSrcVpp = endpoints.get(SOURCE_VPP_INDEX);
+            final Ipv4AddressNoZone ipAddressDstVpp = endpoints.get(DESTINATION_VPP_INDEX);
+
+            // remove bridge domains from vpp
+            LOG.debug("Removing bridge domain from vxlan tunnel on node {}", sourceNode);
+            vppModifier.deleteVxlanInterface(ipAddressSrcVpp, ipAddressDstVpp, iiToSrcVpp);
+            LOG.debug("Removing bridge domain from vxlan tunnel on node {}", dstNode);
+            vppModifier.deleteVxlanInterface(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp);
         }
     }
 
@@ -741,7 +761,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         List<ListenableFuture<Void>> createdNodesFuture = new ArrayList<>();
         for (SupportingNode supportingNode : node.getSupportingNode()) {
             final NodeId nodeMount = supportingNode.getNodeRef();
-            final VbdNetconfConnectionProbe probe = new VbdNetconfConnectionProbe(supportingNode.getNodeRef(), databroker);
+            final VbdNetconfConnectionProbe probe = new VbdNetconfConnectionProbe(supportingNode.getNodeRef(), dataBroker);
             try {
                 // Verify netconf connection
                 boolean connectionReady = probe.startProbing();
@@ -779,7 +799,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         return Futures.transform(addVppToBridgeDomainFuture, new AsyncFunction<Void, Void>() {
 
             @Override
-            public ListenableFuture<Void> apply(Void input) throws Exception {
+            public ListenableFuture<Void> apply(@Nonnull Void input) throws Exception {
                 LOG.debug("Storing bridge member to operational DS....");
                 final BridgeMemberBuilder bridgeMemberBuilder = new BridgeMemberBuilder();
                 bridgeMemberBuilder.setSupportingBridgeDomain(new ExternalReference(iiBridgeDomainOnVPPRest));

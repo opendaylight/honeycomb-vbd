@@ -56,11 +56,15 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
     private final Map<TopologyKey, VbdBridgeDomain> domains = new HashMap<>();
     private final DataBroker dataBroker;
     private final MountPointService mountService;
+    // Number of attempts BD can be restarted during creation
+    @SuppressWarnings("FieldCanBeLocal")
+    private final byte BD_RESTART_COUNTER = 5;
+    @SuppressWarnings("FieldCanBeLocal")
+    private final int BD_RESTART_TIMEOUT = 4000; // millis
 
     TopologyMonitor(final DataBroker dataBroker, final MountPointService mountService) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.mountService = Preconditions.checkNotNull(mountService);
-
     }
 
     @Override
@@ -82,7 +86,7 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
                     break;
                 case WRITE:
                     LOG.debug("Topology {} added", PPrint.topology(topology));
-                    startDomain(topology);
+                    startDomain(topology, BD_RESTART_COUNTER);
                     break;
                 default:
                     LOG.warn("Ignoring unhandled modification type {}", mod.getModificationType());
@@ -100,23 +104,22 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
         }
     }
 
-    private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
-        // TODO possible loop, needs better handling but works for now
+    private synchronized void restartDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, byte counter) {
         try {
             LOG.warn("Restarting domain {}", PPrint.topology(topology));
             final VbdBridgeDomain prev = domains.get(topology.getKey());
             if (prev != null) {
                 prev.forceStop();
             }
-            Thread.sleep(4000); // Wait some time till the next try
-            startDomain(topology);
+            Thread.sleep(BD_RESTART_TIMEOUT); // Wait some time till the next try
+            startDomain(topology, --counter);
         } catch (InterruptedException e) {
             LOG.warn("Thread interrupted to ... ", e);
         }
     }
 
     @GuardedBy("this")
-    private void startDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
+    private void startDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, byte counter) {
         updateStatus(PPrint.topology(topology), BridgeDomainStatus.Starting);
         LOG.debug("Starting bridge domain for {}", PPrint.topology(topology));
         final VbdBridgeDomain prev = domains.get(topology.getKey());
@@ -136,20 +139,25 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
                                                  final AsyncTransaction<?, ?> transaction, final Throwable cause) {
                 LOG.warn("Bridge domain for topology {} failed, restarting it. Cause: {}", PPrint.topology(topology),
                         cause.getMessage());
-                restartDomain(topology);
+                if (counter > 0) {
+                    restartDomain(topology, counter);
+                }
+                else {
+                    LOG.warn("Bridge domain {} cannot be created, maximum number of attempts reached",
+                            PPrint.topology(topology));
+                }
             }
         });
         VbdBridgeDomain domain;
         try {
             domain = VbdBridgeDomain.create(dataBroker, mountService, topology, chain, tunnelIdAllocator);
+            domains.put(topology.getKey(), domain);
+            updateStatus(PPrint.topology(topology), BridgeDomainStatus.Started);
+            LOG.debug("Bridge domain {} for {} started", domain, PPrint.topology(topology));
         } catch (Exception e) {
             updateStatus(PPrint.topology(topology), BridgeDomainStatus.Failed);
             LOG.warn("VBD failed to create/startProbing bridge domain {}", PPrint.topology(topology), e);
-            return;
         }
-        domains.put(topology.getKey(), domain);
-        updateStatus(PPrint.topology(topology), BridgeDomainStatus.Started);
-        LOG.debug("Bridge domain {} for {} started", domain, PPrint.topology(topology));
     }
 
     @GuardedBy("this")

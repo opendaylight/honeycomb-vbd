@@ -419,7 +419,8 @@ final class VppModifier {
         }
         // Interface does not exist, create a new one with BD assigned
         else {
-            LOG.debug("Interface with srcIp {} and dstIp {} not found, creating a new one with bridge domain attached.");
+            LOG.debug("Interface with srcIp {} and dstIp {} not found, creating a new one with bridge domain attached.",
+                    ipSrc, ipDst);
             final Interface interfaceData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
             LOG.trace("Interface data: {}", interfaceData);
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface

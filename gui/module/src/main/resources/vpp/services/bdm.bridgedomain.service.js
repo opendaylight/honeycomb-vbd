@@ -14,15 +14,8 @@ define(['app/vpp/vpp.module'], function(vpp) {
             this['topology-types'] = {
                 'vbridge-topology:vbridge-topology': {}
             };
-            this['underlay-topology'] = [
-                {
-                    'topology-ref': 'topology-netconf'
-                }
-            ];
-            this['vbridge-topology:tunnel-type'] = 'tunnel-type-vxlan';
-            this['vbridge-topology:vxlan'] = {
-                'vni': '1'
-            };
+            this['vbridge-topology:tunnel-type'] = 'vxlan-tunnel:tunnel-type-vxlan';
+            this['vxlan-tunnel:vni'] = '1';
             this['vbridge-topology:flood'] = "true",
             this['vbridge-topology:forward'] = "true",
             this['vbridge-topology:learn'] = "true",

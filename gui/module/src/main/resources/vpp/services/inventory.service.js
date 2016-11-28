@@ -71,7 +71,14 @@ define(['app/vpp/vpp.module', 'next'], function(vpp) {
 
         s.deleteVpp = function(vpp, finishedSuccessfullyCallback) {
             console.log(vpp);
-            var restObj = VPPRestangular.one('restconf').one('config').one('network-topology:network-topology').one('topology').one('topology-netconf').one('node').one('controller-config').one('yang-ext:mount').one('config:modules').one('module').one('odl-sal-netconf-connector-cfg:sal-netconf-connector').one(vpp.name);
+            var restObj = VPPRestangular
+                .one('restconf')
+                .one('config')
+                .one('network-topology:network-topology')
+                .one('topology')
+                .one('topology-netconf')
+                .one('node')
+                .one(vpp.name);
 
             restObj.remove().then(function() {
                 finishedSuccessfullyCallback(true);
@@ -80,42 +87,29 @@ define(['app/vpp/vpp.module', 'next'], function(vpp) {
             });
         };
 
-        s.mountVpp = function(name,ip,port,un,pw,finishedSuccessfullyCallback) {
+        s.mountVpp = function(name, ip, port, un, pw, finishedSuccessfullyCallback) {
 
-            var postData =  '\
-            <module xmlns="urn:opendaylight:params:xml:ns:yang:controller:config">\
-            <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">prefix:sal-netconf-connector</type>\
-            <name>'+name+'</name>\
-            <address xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">'+ip+'</address>\
-            <port xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">'+port+'</port>\
-                <username xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">'+un+'</username>\
-                <password xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">'+pw+'</password>\
-                <tcp-only xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">false</tcp-only>\
-                <event-executor xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">\
-                <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:netty">prefix:netty-event-executor</type>\
-            <name>global-event-executor</name>\
-            </event-executor>\
-            <binding-registry xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">\
-                <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:md:sal:binding">prefix:binding-broker-osgi-registry</type>\
-            <name>binding-osgi-broker</name>\
-            </binding-registry>\
-            <dom-registry xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">\
-                <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:md:sal:dom">prefix:dom-broker-osgi-registry</type>\
-            <name>dom-broker</name>\
-            </dom-registry>\
-            <client-dispatcher xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">\
-                <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:config:netconf">prefix:netconf-client-dispatcher</type>\
-            <name>global-netconf-dispatcher</name>\
-            </client-dispatcher>\
-            <processing-executor xmlns="urn:opendaylight:params:xml:ns:yang:controller:md:sal:connector:netconf">\
-                <type xmlns:prefix="urn:opendaylight:params:xml:ns:yang:controller:threadpool">prefix:threadpool</type>\
-            <name>global-netconf-processing-executor</name>\
-            </processing-executor>\
-            </module>';
+            var reqData =  '\
+                <node xmlns="urn:TBD:params:xml:ns:yang:network-topology">\
+                    <node-id>' + name + '</node-id>\
+                    <host xmlns="urn:opendaylight:netconf-node-topology">' + ip + '</host>\
+                    <port xmlns="urn:opendaylight:netconf-node-topology">' + port + '</port>\
+                    <username xmlns="urn:opendaylight:netconf-node-topology">' + un + '</username>\
+                    <password xmlns="urn:opendaylight:netconf-node-topology">' + pw + '</password>\
+                    <tcp-only xmlns="urn:opendaylight:netconf-node-topology">false</tcp-only>\
+                    <keepalive-delay xmlns="urn:opendaylight:netconf-node-topology">0</keepalive-delay>\
+                </node>';
 
-            var restObj = VPPRestangularXml.one('restconf').one('config').one('opendaylight-inventory:nodes').one('node').one('controller-config').one('yang-ext:mount');
+            var restObj = VPPRestangularXml
+                .one('restconf')
+                .one('config')
+                .one('network-topology:network-topology')
+                .one('topology')
+                .one('topology-netconf')
+                .one('node')
+                .one(name);
 
-            restObj.post('config:modules', postData).then(function() {
+            restObj.customPUT(reqData).then(function() {
                 finishedSuccessfullyCallback(true);
             }, function(res) {
                 finishedSuccessfullyCallback(false);

@@ -17,7 +17,7 @@ define(['app/vpp/vpp.module'], function(vpp) {
                     'node-ref': vppId
                 }
             ];
-            this['netconf-node-topology:pass-through'] = {};
+            //this['netconf-node-topology:pass-through'] = {};
         };
 
         s.createObj = function(nodeId, vppId) {

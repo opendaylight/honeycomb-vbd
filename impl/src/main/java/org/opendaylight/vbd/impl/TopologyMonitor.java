@@ -9,38 +9,32 @@
 package org.opendaylight.vbd.impl;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
-import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.AsyncTransaction;
-import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChain;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionChainListener;
 import org.opendaylight.vbd.api.VxlanTunnelIdAllocator;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.VppState;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.BridgeDomains;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomainBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.state.bridge.domains.BridgeDomainKey;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusAugmentation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev161005.BridgeDomainStatusFields.BridgeDomainStatus;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.topology.types.VbridgeTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.Topology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.TopologyKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
-import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,20 +72,31 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             Preconditions.checkArgument(!topology.isWildcarded(), "Wildcard topology %s is not supported", topology);
 
             final DataObjectModification<VbridgeTopology> mod = c.getRootNode();
-            updateStatus(PPrint.topology(topology), BridgeDomainStatus.Stopped);
+            ListenableFuture<Void> processionState = Futures.immediateFuture(null);
             switch (mod.getModificationType()) {
                 case DELETE:
                     LOG.debug("Topology {} removed", PPrint.topology(topology));
-                    stopDomain(topology);
+                    processionState = stopDomain(topology);
                     break;
                 case WRITE:
                     LOG.debug("Topology {} added", PPrint.topology(topology));
-                    startDomain(topology, BD_RESTART_COUNTER);
+                    processionState = startDomain(topology, BD_RESTART_COUNTER);
                     break;
                 default:
                     LOG.warn("Ignoring unhandled modification type {}", mod.getModificationType());
                     break;
             }
+            Futures.addCallback(processionState, new FutureCallback<Void>() {
+                @Override
+                public void onSuccess(@Nullable Void aVoid) {
+                    LOG.info("VBridge topology {} procession completed", topology.getKey());
+                }
+
+                @Override
+                public void onFailure(@Nullable Throwable throwable) {
+                    LOG.warn("VBridge topology {} procession failed", topology.getKey());
+                }
+            });
         }
     }
 
@@ -119,14 +124,13 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
     }
 
     @GuardedBy("this")
-    private void startDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, byte counter) {
-        updateStatus(PPrint.topology(topology), BridgeDomainStatus.Starting);
+    private ListenableFuture<Void> startDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, byte counter) {
+        VbdUtil.updateStatus(dataBroker, PPrint.topology(topology), BridgeDomainStatus.Starting);
         LOG.debug("Starting bridge domain for {}", PPrint.topology(topology));
         final VbdBridgeDomain prev = domains.get(topology.getKey());
         if (prev != null) {
             LOG.warn("Bridge domain {} for {} already started", prev, PPrint.topology(topology));
-            updateStatus(PPrint.topology(topology), BridgeDomainStatus.Started);
-            return;
+            return VbdUtil.updateStatus(dataBroker, PPrint.topology(topology), BridgeDomainStatus.Started);
         }
         final BindingTransactionChain chain = dataBroker.createTransactionChain(new TransactionChainListener() {
             @Override
@@ -141,8 +145,7 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
                         cause.getMessage());
                 if (counter > 0) {
                     restartDomain(topology, counter);
-                }
-                else {
+                } else {
                     LOG.warn("Bridge domain {} cannot be created, maximum number of attempts reached",
                             PPrint.topology(topology));
                 }
@@ -152,50 +155,24 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
         try {
             domain = VbdBridgeDomain.create(dataBroker, mountService, topology, chain, tunnelIdAllocator);
             domains.put(topology.getKey(), domain);
-            updateStatus(PPrint.topology(topology), BridgeDomainStatus.Started);
             LOG.debug("Bridge domain {} for {} started", domain, PPrint.topology(topology));
+            return VbdUtil.updateStatus(dataBroker, PPrint.topology(topology), BridgeDomainStatus.Started);
         } catch (Exception e) {
-            updateStatus(PPrint.topology(topology), BridgeDomainStatus.Failed);
-            LOG.warn("VBD failed to create/startProbing bridge domain {}", PPrint.topology(topology), e);
+            LOG.warn("VBD failed to create/startProbing bridge domain {}", PPrint.topology(topology), e.getMessage());
+            return VbdUtil.updateStatus(dataBroker, PPrint.topology(topology), BridgeDomainStatus.Failed);
         }
     }
 
     @GuardedBy("this")
-    private void stopDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
+    private ListenableFuture<Void> stopDomain(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         final VbdBridgeDomain domain = domains.remove(topology.getKey());
         if (domain == null) {
             LOG.warn("Bridge domain for {} not present", PPrint.topology(topology));
-            return;
+            return Futures.immediateFuture(null);
         }
 
         domain.stop();
-        updateStatus(PPrint.topology(topology), BridgeDomainStatus.Stopped);
-    }
-
-    /**
-     * Write {@link BridgeDomainStatus} into OPER DS
-     *
-     * @param bdName name to identify bridge domain
-     * @param status which will be written
-     */
-    private void updateStatus(final String bdName, final BridgeDomainStatus status) {
-        final InstanceIdentifier<BridgeDomain> vppStatusIid =
-                InstanceIdentifier.builder(VppState.class)
-                        .child(BridgeDomains.class)
-                        .child(BridgeDomain.class, new BridgeDomainKey(bdName))
-                        .build();
-        final BridgeDomainStatusAugmentationBuilder bdStatusAugmentationBuilder =
-                new BridgeDomainStatusAugmentationBuilder();
-        bdStatusAugmentationBuilder.setBridgeDomainStatus(status);
-        final BridgeDomain bdState = new BridgeDomainBuilder()
-                .setName(bdName)
-                .setKey(new BridgeDomainKey(bdName))
-                .addAugmentation(BridgeDomainStatusAugmentation.class, bdStatusAugmentationBuilder.build())
-                .build();
-        final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.OPERATIONAL, vppStatusIid, bdState);
-        wTx.submit();
-        LOG.debug("Status updated for bridge domain {}. Current status: {}", bdName, status);
+        return VbdUtil.updateStatus(dataBroker, PPrint.topology(topology), BridgeDomainStatus.Stopped);
     }
 
     @Override
@@ -243,6 +220,5 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
                 return 0;
             }
         }
-
     }
 }

@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_73e8007d",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/TopologyMonitor.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 112,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2016-11-28T08:17:42Z",
+      "side": 1,
+      "message": "I would suggest to move this value to a variable such as BD_RESTART_TIMEOUT next to BD_RESTART_COUNTER.",
+      "range": {
+        "startLine": 112,
+        "startChar": 25,
+        "endLine": 112,
+        "endChar": 29
+      },
+      "revId": "9bca0364713cadc399b4cca8b1d93f613a7952dc",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

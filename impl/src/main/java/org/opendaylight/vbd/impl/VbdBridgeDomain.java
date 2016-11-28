@@ -271,7 +271,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
 
     synchronized void forceStop() {
         // TODO better be to return future
-        LOG.info("Bridge domain {} for {} going down", this, PPrint.topology(topology));
+        LOG.debug("Bridge domain {} for {} going down", this, PPrint.topology(topology));
         reg.close();
         chain.close();
         LOG.info("Bridge domain {} for {} is down", this, PPrint.topology(topology));

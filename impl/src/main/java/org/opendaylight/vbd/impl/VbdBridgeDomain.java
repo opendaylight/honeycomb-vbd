@@ -33,7 +33,6 @@ import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
-import org.opendaylight.controller.md.sal.binding.api.DataObjectModification.ModificationType;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
@@ -166,6 +165,217 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION, topology), this);
     }
 
+    /**
+     * Topology listener registered for every created bridge domain.
+     * @param changes topology modification events
+     */
+    @Override
+    public synchronized void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<Topology>> changes) {
+        for (DataTreeModification<Topology> change : changes) {
+            LOG.debug("Domain {} for {} processing change {}", this.bridgeDomainName, PPrint.topology(topology), change.getClass());
+            final DataObjectModification<Topology> modification = change.getRootNode();
+            ListenableFuture<Void> modificationTask;
+            switch (modification.getModificationType()) {
+                case WRITE:
+                    modificationTask = handleNewTopology(modification);
+                    break;
+                case SUBTREE_MODIFIED:
+                    modificationTask = handleModifiedTopology(modification);
+                    break;
+                case DELETE:
+                    LOG.debug("Topology {} deleted, expecting shutdown", PPrint.topology(topology));
+                    modificationTask = deleteBridgeDomain();
+                    break;
+                default:
+                    LOG.warn("Unhandled topology modification {}", modification);
+                    modificationTask = Futures.immediateFuture(null);
+                    break;
+            }
+            Futures.addCallback(modificationTask, new FutureCallback<Void>() {
+                @Override
+                public void onSuccess(@Nullable Void aVoid) {
+                    LOG.info("Topology change for bridge domain {} completed", PPrint.topology(topology));
+                }
+
+                @Override
+                public void onFailure(@Nonnull Throwable throwable) {
+                    LOG.warn("Topology change for bridge domain {} failed", PPrint.topology(topology));
+                }
+            });
+        }
+    }
+
+    private ListenableFuture<Void> handleNewTopology(final DataObjectModification<Topology> modification) {
+        Preconditions.checkNotNull(modification.getDataAfter());
+        final Topology data = modification.getDataAfter();
+        // Handle VBridge augmentation
+        final TopologyVbridgeAugment vbdConfiguration = data.getAugmentation(TopologyVbridgeAugment.class);
+        if (vbdConfiguration != null) {
+            // Spread configuration
+            setConfiguration(vbdConfiguration);
+            vppModifier.setConfig(vbdConfiguration);
+        }
+        else {
+            LOG.error("Topology {} has no configuration", PPrint.topology(topology));
+        }
+        // Handle new nodes
+        final Collection<DataObjectModification<? extends DataObject>> modifiedChildren = modification.getModifiedChildren();
+        final List<ListenableFuture<Void>> newCumulativeTopologyResult = new ArrayList<>();
+        for (final DataObjectModification<? extends DataObject> childNode : modifiedChildren) {
+            LOG.debug("Processing modified child {} from topology {}", childNode, PPrint.topology(topology));
+            if (Node.class.isAssignableFrom(childNode.getDataType())) {
+                newCumulativeTopologyResult.add(handleModifiedNode(childNode));
+            }
+        }
+        final ListenableFuture<List<Void>> newTopologyResult = Futures.allAsList(newCumulativeTopologyResult);
+        return Futures.transform(newTopologyResult, new Function<List<Void>, Void>() {
+            @Nullable
+            @Override
+            public Void apply(@Nullable List<Void> voids) {
+                // NOOP
+                return null;
+            }
+        });
+    }
+
+    private ListenableFuture<Void> handleModifiedTopology(final DataObjectModification<Topology> modification) {
+        Preconditions.checkNotNull(modification.getDataAfter());
+        final DataObjectModification<TopologyVbridgeAugment> topologyModification =
+                modification.getModifiedAugmentation(TopologyVbridgeAugment.class);
+        // Handle VBridge augmentation
+        if (topologyModification != null &&
+                !DataObjectModification.ModificationType.DELETE.equals(topologyModification.getModificationType())) {
+            // Update configuration
+            updateConfiguration(topologyModification);
+        }
+        // Handle new nodes
+        final Collection<DataObjectModification<? extends DataObject>> modifiedChildren = modification.getModifiedChildren();
+        final List<ListenableFuture<Void>> updatedCumulativeTopologyTask = new ArrayList<>();
+        for (final DataObjectModification<? extends DataObject> childNode : modifiedChildren) {
+            LOG.debug("Processing modified child {} from topology {}", childNode, PPrint.topology(topology));
+            if (Node.class.isAssignableFrom(childNode.getDataType())) {
+                updatedCumulativeTopologyTask.add(handleModifiedNode(childNode));
+            }
+        }
+        final ListenableFuture<List<Void>> updatedTopologyResult = Futures.allAsList(updatedCumulativeTopologyTask);
+        return Futures.transform(updatedTopologyResult, new Function<List<Void>, Void>() {
+            @Nullable
+            @Override
+            public Void apply(@Nullable List<Void> voids) {
+                // NOOP
+                return null;
+            }
+        });
+    }
+
+    private ListenableFuture<Void> deleteBridgeDomain() {
+        LOG.debug("Deleting entire bridge domain {}", bridgeDomainName);
+        final Collection<KeyedInstanceIdentifier<Node, NodeKey>> vppNodes = nodesToVpps.values();
+        vppNodes.forEach(vppModifier::deleteBridgeDomainFromVppNode);
+        nodesToVpps.clear();
+        return Futures.immediateFuture(null);
+    }
+
+    private ListenableFuture<Void> handleModifiedNode(final DataObjectModification<? extends DataObject> nodeModification) {
+        switch (nodeModification.getModificationType()) {
+            case DELETE:
+                LOG.debug("Topology {} node {} deleted", PPrint.topology(topology), nodeModification.getIdentifier());
+                final Node deletedNode = (Node) nodeModification.getDataBefore();
+                if (deletedNode != null) {
+                    final KeyedInstanceIdentifier<Node, NodeKey> vppIID = nodesToVpps.get(deletedNode.getNodeId()).iterator().next();
+                    final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
+                    LOG.debug("Removing node from BD. Node: {}. backingNODE: {}", vppIID, backingNodeIID);
+                    removeNodeFromBridgeDomain(vppIID, backingNodeIID);
+                    if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+                        removeVxlanInterfaces(deletedNode.getNodeId());
+                    }
+                } else {
+                    LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
+                }
+                break;
+            case SUBTREE_MODIFIED:
+                LOG.debug("Topology {} node {} modified", PPrint.topology(topology), nodeModification.getIdentifier());
+                for (DataObjectModification<? extends DataObject>  nodeChild : nodeModification.getModifiedChildren()) {
+                    if (TerminationPoint.class.isAssignableFrom(nodeChild.getDataType())) {
+                        final Node modifiedNode = (Node) nodeChild.getDataAfter();
+                        modifyTerminationPoint((DataObjectModification<TerminationPoint>) nodeChild,modifiedNode.getNodeId());
+                    }
+                }
+                break;
+            case WRITE:
+                final Node newNode = (Node) nodeModification.getDataAfter();
+                if (newNode == null) {
+                    LOG.warn("Provided node is null");
+                    return Futures.immediateFuture(null);
+                }
+                return handleNewModifiedNode(newNode);
+
+//                LOG.debug("Topology {} node {} created", PPrint.topology(topology), nodeMod.getIdentifier());
+//                final int numberVppsBeforeAddition = nodesToVpps.keySet().size();
+//                final Node newNode = (Node) nodeMod.getDataAfter();
+//                if (newNode == null) {
+//                    LOG.warn("Node {} is null", nodeMod.getIdentifier());
+//                    return Futures.immediateFuture(null);
+//                }
+//                try {
+//                    createNode(newNode).get();
+//                } catch (InterruptedException | ExecutionException e) {
+//                    LOG.warn("Bridge domain {} was not created on node {}. Further processing is cancelled.",
+//                            java.util.Optional.ofNullable(topology)
+//                                    .map(t -> t.firstKeyOf(Topology.class))
+//                                    .map(TopologyKey::getTopologyId)
+//                                    .map(Uri::getValue),
+//                            newNode.getNodeId().getValue(), e);
+//                    return Futures.immediateFuture(null);
+//                }
+//                if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+//                    final int numberVppsAfterAddition = nodesToVpps.keySet().size();
+//                    if ((numberVppsBeforeAddition <= numberVppsAfterAddition) && (numberVppsBeforeAddition >= 1)) {
+//                        addVxlanTunnel(newNode.getNodeId());
+//                    }
+//                } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
+//                    final NodeVbridgeVlanAugment vlanAug = newNode.getAugmentation(NodeVbridgeVlanAugment.class);
+//                    addVlanSubInterface(newNode.getNodeId(), vlanAug.getSuperInterface());
+//                } else {
+//                    LOG.warn("Unknown tunnel type {}", config.getTunnelType());
+//                }
+            default:
+                LOG.warn("Unhandled node modification {} in topology {}", nodeModification, PPrint.topology(topology));
+                break;
+        }
+        return Futures.immediateFuture(null);
+    }
+
+    private ListenableFuture<Void> handleNewModifiedNode(@Nonnull final Node newModifiedNode) {
+        LOG.debug("Topology {} node {} created", PPrint.topology(topology), newModifiedNode.getNodeId().getValue());
+        final int numberOfVppsBeforeAddition = nodesToVpps.keySet().size();
+        final ListenableFuture<Void> createNodeTask = createNode(newModifiedNode);
+        return Futures.transform(createNodeTask, new Function<Void, Void>() {
+            @Nullable
+            @Override
+            public Void apply(@Nullable Void input) {
+                // Vxlan tunnel type
+                try {
+                    if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+                        final int numberOfVppsAfterAddition = nodesToVpps.keySet().size();
+                        if ((numberOfVppsBeforeAddition <= numberOfVppsAfterAddition) && (numberOfVppsBeforeAddition >= 1)) {
+                            return addVxlanTunnel(newModifiedNode.getNodeId()).get();
+                        }
+                    } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
+                        final NodeVbridgeVlanAugment vlanAug = newModifiedNode.getAugmentation(NodeVbridgeVlanAugment.class);
+                        return addVlanSubInterface(newModifiedNode.getNodeId(), vlanAug.getSuperInterface()).get();
+                    } else {
+                        LOG.warn("Unknown tunnel type {}", config.getTunnelType());
+                    }
+                }
+                catch (InterruptedException | ExecutionException e) {
+                    LOG.warn("Exception while processing tunnel for new node {}", newModifiedNode.getNodeId().getValue());
+                }
+                return null;
+            }
+        });
+    }
+
     private String provideIIBrdigeDomainOnVPPRest() {
         final StringBuilder strBuilder = new StringBuilder();
         strBuilder.append("v3po:vpp/bridge-domains/bridge-domain/");
@@ -284,13 +494,6 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         chain.close();
     }
 
-    private void deleteBridgeDomain() {
-        LOG.debug("Deleting entire bridge domain {}", bridgeDomainName);
-        final Collection<KeyedInstanceIdentifier<Node, NodeKey>> vppNodes = nodesToVpps.values();
-        vppNodes.forEach(vppModifier::deleteBridgeDomainFromVppNode);
-        nodesToVpps.clear();
-    }
-
     private ListenableFuture<List<InstanceIdentifier<Link>>> findPrunableLinks(final KeyedInstanceIdentifier<Node, NodeKey> vbdNode) {
         LOG.debug("Finding prunable links for node {}", PPrint.node(vbdNode));
 
@@ -402,127 +605,6 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         nodesToVpps.removeAll(vppNode);
     }
 
-    @Override
-    public synchronized void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<Topology>> changes) {
-        for (DataTreeModification<Topology> change : changes) {
-            LOG.debug("Domain {} for {} processing change {}", this.bridgeDomainName, PPrint.topology(topology), change.getClass());
-            final DataObjectModification<Topology> mod = change.getRootNode();
-            switch (mod.getModificationType()) {
-                case DELETE:
-                    LOG.debug("Topology {} deleted, expecting shutdown", PPrint.topology(topology));
-                    deleteBridgeDomain();
-                    break;
-                case SUBTREE_MODIFIED:
-                    // First check if the configuration has changed
-                    final DataObjectModification<TopologyVbridgeAugment> newConfig = mod.getModifiedAugmentation(TopologyVbridgeAugment.class);
-                    if (newConfig != null) {
-                        if (newConfig.getModificationType() != ModificationType.DELETE) {
-                            LOG.debug("Topology {} modified configuration {}", PPrint.topology(topology), newConfig);
-                            updateConfiguration(newConfig);
-                        } else {
-                            // FIXME: okay, what can we do about this one?
-                            LOG.error("Topology {} configuration deleted, good luck!", PPrint.topology(topology));
-                        }
-                    }
-
-                    handleModifiedChildren(mod.getModifiedChildren());
-
-                    break;
-                case WRITE:
-                    final Topology data = mod.getDataAfter();
-
-                    // Read configuration
-                    final TopologyVbridgeAugment vbdConfig = data.getAugmentation(TopologyVbridgeAugment.class);
-                    vppModifier.setConfig(vbdConfig);
-                    if (vbdConfig != null) {
-                        setConfiguration(vbdConfig);
-                    } else {
-                        LOG.error("Topology {} has no configuration, good luck!", PPrint.topology(topology));
-                    }
-
-                    // handle any nodes which were written with the new topology
-                    handleModifiedChildren(mod.getModifiedChildren());
-
-                    break;
-                default:
-                    LOG.warn("Unhandled topology modification {}", mod);
-                    break;
-            }
-        }
-    }
-
-    private void handleModifiedChildren(final Collection<DataObjectModification<? extends DataObject>> children) {
-        for (final DataObjectModification<? extends DataObject> child : children) {
-            LOG.debug("Topology {} modified child {}", PPrint.topology(topology), child);
-
-            if (Node.class.isAssignableFrom(child.getDataType())) {
-                modifyNode((DataObjectModification<Node>) child);
-            }
-        }
-    }
-
-    private void modifyNode(final DataObjectModification<Node> nodeMod) {
-        switch (nodeMod.getModificationType()) {
-            case DELETE:
-                LOG.debug("Topology {} node {} deleted", PPrint.topology(topology), nodeMod.getIdentifier());
-                final Node deletedNode = nodeMod.getDataBefore();
-                if (deletedNode != null) {
-                    final KeyedInstanceIdentifier<Node, NodeKey> vppIID = nodesToVpps.get(deletedNode.getNodeId()).iterator().next();
-                    final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIID = topology.child(Node.class, deletedNode.getKey());
-                    LOG.debug("Removing node from BD. Node: {}. backingNODE: {}", vppIID, backingNodeIID);
-                    removeNodeFromBridgeDomain(vppIID, backingNodeIID);
-                    if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
-                        removeVxlanInterfaces(deletedNode.getNodeId());
-                    }
-                } else {
-                    LOG.warn("Got null data before node when attempting to delete bridge domain {}", bridgeDomainName);
-                }
-                break;
-            case SUBTREE_MODIFIED:
-                LOG.debug("Topology {} node {} modified", PPrint.topology(topology), nodeMod.getIdentifier());
-                for (DataObjectModification<? extends DataObject>  nodeChild : nodeMod.getModifiedChildren()) {
-                    if (TerminationPoint.class.isAssignableFrom(nodeChild.getDataType())) {
-                        modifyTerminationPoint((DataObjectModification<TerminationPoint>) nodeChild,nodeMod.getDataAfter().getNodeId());
-                    }
-                }
-                break;
-            case WRITE:
-                LOG.debug("Topology {} node {} created", PPrint.topology(topology), nodeMod.getIdentifier());
-                final int numberVppsBeforeAddition = nodesToVpps.keySet().size();
-                final Node newNode = nodeMod.getDataAfter();
-                if (newNode == null) {
-                    LOG.warn("Node {} is null", nodeMod.getIdentifier());
-                    return;
-                }
-                try {
-                    createNode(newNode).get();
-                } catch (InterruptedException | ExecutionException e) {
-                    LOG.warn("Bridge domain {} was not created on node {}. Further processing is cancelled.",
-                            java.util.Optional.ofNullable(topology)
-                                .map(t -> t.firstKeyOf(Topology.class))
-                                .map(TopologyKey::getTopologyId)
-                                .map(Uri::getValue),
-                            newNode.getNodeId().getValue(), e);
-                    return;
-                }
-                if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
-                    final int numberVppsAfterAddition = nodesToVpps.keySet().size();
-                    if ((numberVppsBeforeAddition <= numberVppsAfterAddition) && (numberVppsBeforeAddition >= 1)) {
-                        addVxlanTunnel(newNode.getNodeId());
-                    }
-                } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
-                    final NodeVbridgeVlanAugment vlanAug = newNode.getAugmentation(NodeVbridgeVlanAugment.class);
-                    addVlanSubInterface(newNode.getNodeId(), vlanAug.getSuperInterface());
-                } else {
-                    LOG.warn("Unknown tunnel type {}", config.getTunnelType());
-                }
-                break;
-            default:
-                LOG.warn("Unhandled node modification {} in topology {}", nodeMod, PPrint.topology(topology));
-                break;
-        }
-    }
-
     private void modifyTerminationPoint(final DataObjectModification<TerminationPoint> nodeChild, final NodeId nodeId) {
         final TerminationPoint terminationPoint = nodeChild.getDataAfter();
         if (terminationPoint != null && terminationPoint.getAugmentation(TerminationPointVbridgeAugment.class) != null) {
@@ -588,7 +670,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         return subIntfBld.build();
     }
 
-    private void addVlanSubInterface(final NodeId nodeId, final String supIntfKey) {
+    private ListenableFuture<Void> addVlanSubInterface(final NodeId nodeId, final String supIntfKey) {
         // create sub interface from node's defined super interface
         // set subinterface vlan parameters (pop 1)
         // add subinterface to bridge domain
@@ -608,7 +690,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(nodeIID, mountService);
         if (vppDataBroker == null) {
             LOG.warn("Cannot get data broker to write interface to node {}", PPrint.node(nodeIID));
-            return;
+            return Futures.immediateFuture(null);
         }
 
         final WriteTransaction tx = vppDataBroker.newWriteOnlyTransaction();
@@ -625,6 +707,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 LOG.warn("Failed to write subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue(), t);
             }
         });
+        return Futures.immediateFuture(null);
     }
 
     /**
@@ -668,7 +751,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
                 .collect(Collectors.toList());
     }
 
-    private void addVxlanTunnel(final NodeId sourceNode) {
+    private ListenableFuture<Void> addVxlanTunnel(final NodeId sourceNode) {
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
 
         LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode.getValue());
@@ -702,6 +785,7 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
             //writing v3po:vxlan container to existing node
             vppModifier.createVirtualInterfaceOnVpp(ipAddressDstVpp, ipAddressSrcVpp, iiToDstVpp, dstVxlanTunnelId);
         }
+        return Futures.immediateFuture(null);
     }
 
     private void removeVxlanInterfaces(final NodeId sourceNode) {
@@ -828,10 +912,9 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
         final TerminationPoint tp = tpBuilder.build();
 
         // process data
-        final WriteTransaction wTx = chain.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.OPERATIONAL, nodeIID.child(TerminationPoint.class, tp.getKey()), tp, true);
-        final CheckedFuture<Void, TransactionCommitFailedException> future = wTx.submit();
-
+        final InstanceIdentifier<TerminationPoint> tpIid = nodeIID.child(TerminationPoint.class, tp.getKey());
+        final CheckedFuture<Void, TransactionCommitFailedException> future = vppModifier.new NetconfTransactionHelper()
+                .putChainTransactionNetconfData(chain, tp, tpIid);
         Futures.addCallback(future, new FutureCallback<Void>() {
             @Override
             public void onSuccess(@Nullable Void result) {

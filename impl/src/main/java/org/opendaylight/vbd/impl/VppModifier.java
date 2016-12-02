@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -30,6 +31,7 @@ import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
+import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.Interfaces;
@@ -109,11 +111,9 @@ final class VppModifier {
             LOG.warn("Got null data broker when attempting to delete bridge domain {}", bridgeDomainName);
             return Optional.absent();
         }
-        final WriteTransaction wTx = new NetconfTransactionHelper().prepareTransactionAndDeleteData(vppDataBroker,
-                this.iiBridgeDomainOnVPP);
-        final ListenableFuture<Void> txResult = wTx.submit();
-
-        Futures.addCallback(txResult, new FutureCallback<Void>() {
+        final CheckedFuture<Void, TransactionCommitFailedException> futureTransaction =
+                new NetconfTransactionHelper().deleteNetconfData(vppDataBroker, this.iiBridgeDomainOnVPP);
+        Futures.addCallback(futureTransaction, new FutureCallback<Void>() {
 
             @Override
             public void onSuccess(@Nullable Void result) {
@@ -126,7 +126,7 @@ final class VppModifier {
             }
         });
 
-        return Optional.of(txResult);
+        return Optional.of(futureTransaction);
     }
 
     private void deleteSupportingInterfaces(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final DataBroker vppDataBroker) {
@@ -267,7 +267,7 @@ final class VppModifier {
     }
 
     /**
-     * Tryies to read ipv4 addresses from all specified {@code iiToVpps } vpps.
+     * Tries to read ipv4 addresses from all specified {@code iidToVpps } vpps.
      *
      * @param iiToVpps collection of instance identifiers which points to concrete mount points.
      * @return future which contains list of ip addresses in the same order as was specified in {@code iiToVpps}
@@ -400,10 +400,10 @@ final class VppModifier {
             final String vxlanId = VbdUtil.provideVxlanId(potentialExistingInterfaceTunnelId);
             final InstanceIdentifier<L2> l2Iid = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                     new InterfaceKey(vxlanId)).augmentation(VppInterfaceAugmentation.class).child(L2.class).builder().build();
-            final ReadWriteTransaction rwTx = new NetconfTransactionHelper()
-                    .prepareTransactionAndPutData(vppDataBroker, l2Data, l2Iid);
+            final CheckedFuture<Void, TransactionCommitFailedException> transactionFuture = new NetconfTransactionHelper()
+                    .putNetconfData(vppDataBroker, l2Data, l2Iid);
             LOG.debug("Submitting new interface BD data to config store...");
-            Futures.addCallback(rwTx.submit(), new FutureCallback<Void>() {
+            Futures.addCallback(transactionFuture, new FutureCallback<Void>() {
 
                 @Override
                 public void onSuccess(@Nullable Void aVoid) {
@@ -426,10 +426,10 @@ final class VppModifier {
             final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToInterface
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                     new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
-            final WriteTransaction wTx = new NetconfTransactionHelper()
-                    .prepareTransactionAndPutData(vppDataBroker, interfaceData, iiToInterface);
+            final CheckedFuture<Void, TransactionCommitFailedException> transactionFuture = new NetconfTransactionHelper()
+                    .putNetconfData(vppDataBroker, interfaceData, iiToInterface);
             LOG.debug("Submitting new interface to config store...");
-            Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
+            Futures.addCallback(transactionFuture, new FutureCallback<Void>() {
 
                 @Override
                 public void onSuccess(@Nullable Void result) {
@@ -684,9 +684,10 @@ final class VppModifier {
         final String vxlanId = VbdUtil.provideVxlanId(tunnelId);
         final InstanceIdentifier<Interface> interfaceId = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                 new InterfaceKey(vxlanId)).builder().build();
-        final ReadWriteTransaction rwTx = new NetconfTransactionHelper().prepareTransactionAndDeleteData(vppDataBroker, interfaceId);
+        final CheckedFuture<Void, TransactionCommitFailedException> futureTransaction =
+                new NetconfTransactionHelper().deleteNetconfData(vppDataBroker, interfaceId);
         LOG.debug("Removing bridge domain from vxlan {} on node {}", vxlanId, vppNodeIid);
-        Futures.addCallback(rwTx.submit(), new FutureCallback<Void>() {
+        Futures.addCallback(futureTransaction, new FutureCallback<Void>() {
             @Override
             public void onSuccess(@Nullable Void aVoid) {
                 LOG.debug("Bridge domain successfully removed from vxlan interface on node {}", vppNodeIid);
@@ -701,40 +702,67 @@ final class VppModifier {
     }
 
     // TODO workaround for netconf, remove when fixed
-    private class NetconfTransactionHelper {
+    class NetconfTransactionHelper {
         private byte counter;
 
         NetconfTransactionHelper() {
             counter = 1;
         }
 
-        <T extends DataObject> ReadWriteTransaction prepareTransactionAndPutData(final DataBroker mountpoint,
-                                                                                 final T data,
-                                                                                 final InstanceIdentifier<T> iid) {
+        <T extends DataObject> CheckedFuture<Void, TransactionCommitFailedException> putNetconfData(final DataBroker mountpoint,
+                                                                                                    final T data,
+                                                                                                    final InstanceIdentifier<T> iid) {
+            CheckedFuture<Void, TransactionCommitFailedException> result = null;
             final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
             try {
                 rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, data);
+                result = rwTx.submit();
             } catch (IllegalStateException e) {
-                LOG.error("Assuming netconf transaction failed, restarting ...", e.getMessage());
+                LOG.error("Assuming netconf transaction failure, restarting ...", e.getMessage());
                 if (counter <= 5) {
-                    return prepareTransactionAndPutData(mountpoint, data, iid);
+                    counter++;
+                    rwTx.cancel();
+                    return putNetconfData(mountpoint, data, iid);
                 }
             }
-            return rwTx;
+            return result;
         }
 
-        <T extends DataObject> ReadWriteTransaction prepareTransactionAndDeleteData(final DataBroker mountpoint,
-                                                                                    final InstanceIdentifier<T> iid) {
+         <T extends DataObject> CheckedFuture<Void, TransactionCommitFailedException> putChainTransactionNetconfData(final BindingTransactionChain chain,
+                                                                                                                     final T data,
+                                                                                                                     final InstanceIdentifier<T> iid) {
+            CheckedFuture<Void, TransactionCommitFailedException> result = null;
+            final ReadWriteTransaction rwTx = chain.newReadWriteTransaction();
+            try {
+                rwTx.put(LogicalDatastoreType.OPERATIONAL, iid, data, true);
+                result = rwTx.submit();
+            } catch (IllegalStateException e) {
+                LOG.error("Assuming netconf transaction failure, restarting ...", e.getMessage());
+                if (counter <= 5) {
+                    counter++;
+                    rwTx.cancel();
+                    return putChainTransactionNetconfData(chain, data, iid);
+                }
+            }
+            return result;
+        }
+
+        <T extends DataObject> CheckedFuture<Void, TransactionCommitFailedException> deleteNetconfData(final DataBroker mountpoint,
+                                                                                                       final InstanceIdentifier<T> iid) {
+            CheckedFuture<Void, TransactionCommitFailedException> result = null;
             final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
             try {
                 rwTx.delete(LogicalDatastoreType.CONFIGURATION, iid);
+                result = rwTx.submit();
             } catch (IllegalStateException e) {
-                LOG.error("Assuming netconf transaction failed, restarting ...", e.getMessage());
+                LOG.error("Assuming netconf transaction failure, restarting ...", e.getMessage());
                 if (counter <= 5) {
-                    return prepareTransactionAndDeleteData(mountpoint, iid);
+                    counter++;
+                    rwTx.cancel();
+                    return deleteNetconfData(mountpoint, iid);
                 }
             }
-            return rwTx;
+            return result;
         }
 
     }

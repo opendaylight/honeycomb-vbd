@@ -42,6 +42,8 @@ import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
 import org.opendaylight.vbd.api.VxlanTunnelIdAllocator;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfConnectionProbe;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.Dot1qVlanId;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.SVlan;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.dot1q.tag.or.any.Dot1qTag;
@@ -123,7 +125,7 @@ import org.slf4j.LoggerFactory;
  * Implementation of a single Virtual Bridge Domain. It is bound to a particular network topology instance, manages
  * bridge members and projects state into the operational data store.
  */
-final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology> {
+public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology> {
     private static final Logger LOG = LoggerFactory.getLogger(VbdBridgeDomain.class);
 
     private static final int SOURCE_VPP_INDEX = 0;
@@ -610,21 +612,13 @@ final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<Topology>
             LOG.warn("Cannot get data broker to write interface to node {}", PPrint.node(nodeIID));
             return;
         }
-
-        final WriteTransaction tx = vppDataBroker.newWriteOnlyTransaction();
-        tx.put(LogicalDatastoreType.CONFIGURATION, iiToVlanSubIntf, subIntf);
-
-        Futures.addCallback(tx.submit(), new FutureCallback<Void>() {
-            @Override
-            public void onSuccess(@Nullable Void result) {
-                LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
-            }
-
-            @Override
-            public void onFailure(@Nonnull Throwable t) {
-                LOG.warn("Failed to write subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue(), t);
-            }
-        });
+        final boolean transactionState = VbdNetconfTransaction.write(vppDataBroker, iiToVlanSubIntf, subIntf,
+                VbdNetconfTransaction.RETRY_COUNT);
+        if (transactionState) {
+            LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
+        } else {
+            LOG.warn("Failed to write subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
+        }
     }
 
     /**

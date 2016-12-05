@@ -6,7 +6,7 @@
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
 
-package org.opendaylight.vbd.impl;
+package org.opendaylight.vbd.impl.transaction;
 
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connected;
 import static org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus.Connecting;
@@ -24,6 +24,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataObjectModification;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeIdentifier;
 import org.opendaylight.controller.md.sal.binding.api.DataTreeModification;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.vbd.impl.VbdBridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNode;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.netconf.node.topology.rev150114.NetconfNodeConnectionStatus.ConnectionStatus;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
@@ -40,20 +41,18 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Purpose: verify whether provided netconf node is already connected or wait if not.
- *
+ * <p>
  * VbdNetconfConnectionProbe registers listener which catches node-related changes from topology-netconf. Provided
- * {@link SettableFuture<Boolean>} future is set according to result: {@link Boolean#TRUE} if node is
+ * {@link SettableFuture} future is set according to result: {@link Boolean#TRUE} if node is
  * connected and {@link Boolean#FALSE} if node is not able to connect or if node is not a netconf device.
- *
+ * <p>
  * While {@link ConnectionStatus#Connecting}, listener waits for another update. Timer is set in
  * {@link VbdBridgeDomain} to prevent stuck
- *
  */
-class VbdNetconfConnectionProbe implements ClusteredDataTreeChangeListener<Node> {
+public class VbdNetconfConnectionProbe implements ClusteredDataTreeChangeListener<Node> {
 
+    public static final byte NODE_CONNECTION_TIMER = 60; // seconds
     private static final Logger LOG = LoggerFactory.getLogger(VbdNetconfConnectionProbe.class);
-    static final byte NODE_CONNECTION_TIMER = 60; // seconds
-
     private final DataBroker dataBroker;
     private final DataTreeIdentifier<Node> path;
     @SuppressWarnings("FieldCanBeLocal")
@@ -61,7 +60,7 @@ class VbdNetconfConnectionProbe implements ClusteredDataTreeChangeListener<Node>
     private ListenerRegistration<VbdNetconfConnectionProbe> registeredListener;
     private SettableFuture<Boolean> futureStatus = SettableFuture.create();
 
-    VbdNetconfConnectionProbe(final NodeId nodeId, final DataBroker dataBroker) {
+    public VbdNetconfConnectionProbe(final NodeId nodeId, final DataBroker dataBroker) {
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         Preconditions.checkNotNull(nodeId);
         final InstanceIdentifier<Node> nodeIid = InstanceIdentifier.builder(NetworkTopology.class)
@@ -72,7 +71,7 @@ class VbdNetconfConnectionProbe implements ClusteredDataTreeChangeListener<Node>
         LOG.debug("Registering listener for node {}", nodeId);
     }
 
-    boolean startProbing() throws ExecutionException, InterruptedException, TimeoutException {
+    public boolean startProbing() throws ExecutionException, InterruptedException, TimeoutException {
         registeredListener = dataBroker.registerDataTreeChangeListener(path, this);
         return futureStatus.get(NODE_CONNECTION_TIMER, TimeUnit.SECONDS);
     }

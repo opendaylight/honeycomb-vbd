@@ -13,6 +13,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
@@ -35,27 +36,26 @@ public class VbdNetconfTransaction {
                                                                     final InstanceIdentifier<T> iid,
                                                                     final T data,
                                                                     byte retryCounter) {
+        LOG.trace("Netconf WRITE transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
         try {
             rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, data, true);
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
+            LOG.trace("Netconf WRITE transaction done. Retry counter: {}", retryCounter);
             return true;
         } catch (IllegalStateException e) {
-            // Retry
+            // TODO retry transaction - bug 7295
             if (retryCounter > 0) {
                 LOG.warn("Assuming that netconf write-transaction failed, restarting ...", e.getMessage());
-                rwTx.cancel();
                 return write(mountpoint, iid, data, --retryCounter);
             } else {
                 LOG.warn("Netconf write-transaction failed. Maximal number of attempts reached", e.getMessage());
-                rwTx.cancel();
                 return false;
             }
         } catch (InterruptedException | ExecutionException e) {
             LOG.warn("Exception while writing data ...", e.getMessage());
-            rwTx.cancel();
             return false;
         }
     }
@@ -64,26 +64,29 @@ public class VbdNetconfTransaction {
                                                                        final LogicalDatastoreType datastoreType,
                                                                        final InstanceIdentifier<T> iid,
                                                                        byte retryCounter) {
+        LOG.trace("Netconf READ transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
-        final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
+        final ReadOnlyTransaction rTx = mountpoint.newReadOnlyTransaction();
+        Optional<T> data;
         try {
             final CheckedFuture<Optional<T>, ReadFailedException> futureData =
-                    rwTx.read(datastoreType, iid);
-            return futureData.get();
+                    rTx.read(datastoreType, iid);
+            data = futureData.get();
+            LOG.trace("Netconf READ transaction done. Data present: {}, Retry counter: {}",
+                    data.isPresent(), retryCounter);
+            return data;
         } catch (IllegalStateException e) {
             // Retry
             if (retryCounter > 0) {
                 LOG.warn("Assuming that netconf read-transaction failed, restarting ...", e.getMessage());
-                rwTx.cancel();
+                rTx.close();
                 return read(mountpoint, datastoreType, iid, --retryCounter);
             } else {
                 LOG.warn("Netconf read-transaction failed. Maximal number of attempts reached", e.getMessage());
-                rwTx.cancel();
                 return Optional.absent();
             }
         } catch (InterruptedException | ExecutionException e) {
             LOG.warn("Exception while reading data ...", e.getMessage());
-            rwTx.cancel();
             return Optional.absent();
         }
     }
@@ -91,27 +94,26 @@ public class VbdNetconfTransaction {
     public synchronized static <T extends DataObject> boolean delete(final DataBroker mountpoint,
                                                                      final InstanceIdentifier<T> iid,
                                                                      byte retryCounter) {
+        LOG.trace("Netconf DELETE transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
         try {
             rwTx.delete(LogicalDatastoreType.CONFIGURATION, iid);
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
+            LOG.trace("Netconf DELETE transaction done. Retry counter: {}", retryCounter);
             return true;
         } catch (IllegalStateException e) {
             // Retry
             if (retryCounter > 0) {
                 LOG.warn("Assuming that netconf delete-transaction failed, restarting ...", e.getMessage());
-                rwTx.cancel();
                 return delete(mountpoint, iid, --retryCounter);
             } else {
                 LOG.warn("Netconf delete-transaction failed. Maximal number of attempts reached", e.getMessage());
-                rwTx.cancel();
                 return false;
             }
         } catch (InterruptedException | ExecutionException e) {
             LOG.warn("Exception while removing data ...", e.getMessage());
-            rwTx.cancel();
             return false;
         }
     }

@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_d19a8813",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 69,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2016-12-08T07:54:39Z",
+      "side": 1,
+      "message": "You can also rename variable to rTx to match the type",
+      "range": {
+        "startLine": 69,
+        "startChar": 34,
+        "endLine": 69,
+        "endChar": 38
+      },
+      "revId": "c2ee6f238ebd09bd1a0403a2da13ab6e13cf1830",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_31b77c88",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 104,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2016-12-08T07:54:39Z",
+      "side": 1,
+      "message": "I think that this should be DELETE transaction.",
+      "range": {
+        "startLine": 104,
+        "startChar": 31,
+        "endLine": 104,
+        "endChar": 35
+      },
+      "revId": "c2ee6f238ebd09bd1a0403a2da13ab6e13cf1830",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

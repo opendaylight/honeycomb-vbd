@@ -99,11 +99,11 @@ final class VppModifier {
                 .child(BridgeDomain.class, new BridgeDomainKey(bridgeDomainName));
     }
 
-    Optional<ListenableFuture<Void>> deleteBridgeDomainFromVppNode(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+    ListenableFuture<Void> deleteBridgeDomainFromVppNode(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker == null) {
             LOG.warn("Got null data broker when attempting to delete bridge domain {}", bridgeDomainName);
-            return Optional.absent();
+            return Futures.immediateFuture(null);
         }
         final boolean transactionState = VbdNetconfTransaction.delete(vppDataBroker, this.iiBridgeDomainOnVPP,
                 VbdNetconfTransaction.RETRY_COUNT);
@@ -112,7 +112,7 @@ final class VppModifier {
         } else {
             LOG.warn("Failed to delete bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
         }
-        return Optional.of(Futures.immediateFuture(null));
+        return Futures.immediateFuture(null);
     }
 
     private void deleteSupportingInterfaces(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final DataBroker vppDataBroker) {
@@ -245,7 +245,7 @@ final class VppModifier {
     }
 
     /**
-     * Tryies to read ipv4 addresses from all specified {@code iiToVpps } vpps.
+     * Tries to read ipv4 addresses from all specified {@code iidToVpps } vpps.
      *
      * @param iiToVpps collection of instance identifiers which points to concrete mount points.
      * @return future which contains list of ip addresses in the same order as was specified in {@code iiToVpps}
@@ -347,13 +347,13 @@ final class VppModifier {
      * @param iidToVpp      {@link InstanceIdentifier} to node
      * @param vxlanTunnelId input id of vxlan tunnel. This id is used only when particular interface does not exist
      */
-    void createVirtualInterfaceOnVpp(final Ipv4AddressNoZone ipSrc, final Ipv4AddressNoZone ipDst,
+    ListenableFuture<Void> createVirtualInterfaceOnVpp(final Ipv4AddressNoZone ipSrc, final Ipv4AddressNoZone ipDst,
                                      final KeyedInstanceIdentifier<Node, NodeKey> iidToVpp, final Integer vxlanTunnelId) {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iidToVpp, mountService);
         if (vppDataBroker == null) {
             LOG.warn("Writing virtual interface {} to VPP {} wasn't successful because data broker is missing",
                     VbdUtil.provideVxlanId(vxlanTunnelId), iidToVpp);
-            return;
+            return Futures.immediateFuture(null);
         }
         final Vxlan vxlanData = prepareVxlan(ipSrc, ipDst);
         final Integer potentialExistingInterfaceTunnelId = findVxlanTunnelFromIpAddresses(ipSrc, ipDst, vppDataBroker);
@@ -393,6 +393,7 @@ final class VppModifier {
                 LOG.warn("Writing super virtual interface to {} failed.", PPrint.node(iidToVpp));
             }
         }
+        return Futures.immediateFuture(null);
     }
 
     /**
@@ -519,7 +520,7 @@ final class VppModifier {
         return vxlanBuilder.build();
     }
 
-    void addInterfaceToBridgeDomainOnVpp(final DataBroker vppDataBroker, final TerminationPointVbridgeAugment termPointVbridgeAug) {
+    ListenableFuture<Void> addInterfaceToBridgeDomainOnVpp(final DataBroker vppDataBroker, final TerminationPointVbridgeAugment termPointVbridgeAug) {
         final InterfaceType interfaceType = termPointVbridgeAug.getInterfaceType();
         if (interfaceType instanceof UserInterface) {
             //REMARK: according contract in YANG model this should be URI to data on mount point (according to RESTCONF)
@@ -533,6 +534,7 @@ final class VppModifier {
             VbdNetconfTransaction.write(vppDataBroker, iiToV3poL2,  prepareL2Data(false, null),
                     VbdNetconfTransaction.RETRY_COUNT);
         }
+        return Futures.immediateFuture(null);
     }
 
     ListenableFuture<Void> addVppToBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
@@ -597,18 +599,18 @@ final class VppModifier {
                 && this.bridgeDomainName.equals(((BridgeBased) interconnection).getBridgeDomain());
     }
 
-    void deleteVxlanInterface(final Ipv4AddressNoZone srcIp, final Ipv4AddressNoZone dstIp,
+    ListenableFuture<Void> deleteVxlanInterface(final Ipv4AddressNoZone srcIp, final Ipv4AddressNoZone dstIp,
                               final KeyedInstanceIdentifier<Node, NodeKey> vppNodeIid) {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(vppNodeIid, mountService);
         if (vppDataBroker == null) {
             LOG.warn("Mountpoint not found for node {}", vppNodeIid);
-            return;
+            return Futures.immediateFuture(null);
         }
         final Integer tunnelId = findVxlanTunnelFromIpAddresses(srcIp, dstIp, vppDataBroker);
         if (tunnelId == null) {
             LOG.debug("Vxlan tunnel with source ip {}, destination ip {} and bridge domain {} not found on node {}",
                     srcIp, dstIp, bridgeDomainName, vppNodeIid);
-            return;
+            return Futures.immediateFuture(null);
         }
         final String vxlanId = VbdUtil.provideVxlanId(tunnelId);
         final InstanceIdentifier<Interface> interfaceId = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
@@ -621,5 +623,6 @@ final class VppModifier {
         } else {
             LOG.warn("Failed to remove bridge domain from interface. Node: {}, cause: {}", vppNodeIid);
         }
+        return Futures.immediateFuture(null);
     }
 }

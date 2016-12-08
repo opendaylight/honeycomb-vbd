@@ -89,12 +89,14 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             Futures.addCallback(processionState, new FutureCallback<Void>() {
                 @Override
                 public void onSuccess(@Nullable Void aVoid) {
-                    LOG.info("VBridge topology {} procession completed", topology.getKey());
+                    LOG.info("VBridge topology {} {} procession completed", PPrint.topology(topology),
+                            mod.getModificationType());
                 }
 
                 @Override
                 public void onFailure(@Nullable Throwable throwable) {
-                    LOG.warn("VBridge topology {} procession failed", topology.getKey());
+                    LOG.warn("VBridge topology {} {} procession failed", PPrint.topology(topology),
+                            mod.getModificationType());
                 }
             });
         }

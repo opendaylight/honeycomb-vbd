@@ -279,7 +279,7 @@ final class VppModifier {
             if (opInterfaceState.isPresent()) {
                 for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf : opInterfaceState.get().getInterface()) {
                     final Optional<Ipv4AddressNoZone> ipOp = readIpAddressFromInterface(intf, iiToVpp);
-                    if (ipOp.isPresent() && intf.getType().equals(Loopback.class)) {
+                    if (ipOp.isPresent() && !intf.getType().equals(Loopback.class)) {
                         resultFuture.set(ipOp);
                         break;
                     }

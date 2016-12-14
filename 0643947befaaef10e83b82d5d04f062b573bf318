@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "1a622d24_9700e9ab",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 195,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-12-14T10:38:18Z",
+      "side": 1,
+      "message": "good catch, thanks",
+      "parentUuid": "1a622d24_57ac91ed",
+      "range": {
+        "startLine": 195,
+        "startChar": 34,
+        "endLine": 195,
+        "endChar": 42
+      },
+      "revId": "0643947befaaef10e83b82d5d04f062b573bf318",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a622d24_b7b9a530",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
         "patchSetId": 3
@@ -36,6 +60,30 @@
       "writtenOn": "2016-12-14T09:24:30Z",
       "side": 1,
       "message": "I think this part of code is the same as in create method. You should consider extracting this to a method. Also the Future.transform is called multiple times with just a parameter change, this can also be extracted I think.",
+      "range": {
+        "startLine": 222,
+        "startChar": 8,
+        "endLine": 238,
+        "endChar": 11
+      },
+      "revId": "0643947befaaef10e83b82d5d04f062b573bf318",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_d731c1a3",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 238,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-12-14T10:38:18Z",
+      "side": 1,
+      "message": "the future part was extracted, I keep the rest untouched for better readability",
+      "parentUuid": "1a622d24_b7b9a530",
       "range": {
         "startLine": 222,
         "startChar": 8,
@@ -71,6 +119,30 @@
     },
     {
       "key": {
+        "uuid": "1a622d24_d7bf01cf",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdBridgeDomain.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 663,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-12-14T10:38:18Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "1a622d24_377d956f",
+      "range": {
+        "startLine": 657,
+        "startChar": 15,
+        "endLine": 663,
+        "endChar": 13
+      },
+      "revId": "0643947befaaef10e83b82d5d04f062b573bf318",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "1a622d24_37f475f1",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdUtil.java",
         "patchSetId": 3
@@ -82,6 +154,30 @@
       "writtenOn": "2016-12-14T09:24:30Z",
       "side": 1,
       "message": "this can be moved to static variable e.g. BRIDGE_DOMAIN_IID_PREFIX.",
+      "range": {
+        "startLine": 173,
+        "startChar": 16,
+        "endLine": 173,
+        "endChar": 54
+      },
+      "revId": "0643947befaaef10e83b82d5d04f062b573bf318",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_b71a4515",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VbdUtil.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 173,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2016-12-14T10:38:18Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "1a622d24_37f475f1",
       "range": {
         "startLine": 173,
         "startChar": 16,

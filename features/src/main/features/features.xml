@@ -39,7 +39,6 @@
   <feature name='odl-vbd-ui' version='${project.version}' description='OpenDaylight :: vbd :: UI'>
     <feature version="${project.version}">odl-vbd-rest</feature>
     <feature version="${restconf.version}">odl-mdsal-apidocs</feature>
-    <feature version="${restconf.version}">odl-mdsal-xsql</feature>
     <feature version="${dlux.version}">odl-dlux-core</feature>
     <feature version="${dluxapps.version}">odl-dluxapps-yangman</feature>
     <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-ui-bundle/{{VERSION}}</bundle>

@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "1a622d24_f9f6018e",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 108,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2017-01-16T10:22:20Z",
+      "side": 1,
+      "message": "Add log why BD removal was skipped",
+      "range": {
+        "startLine": 108,
+        "startChar": 12,
+        "endLine": 108,
+        "endChar": 49
+      },
+      "revId": "2a61da1a07ffa7a8f0c5cf92c113513209c76567",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "1a622d24_19413da9",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 555,
+      "author": {
+        "id": 3910
+      },
+      "writtenOn": "2017-01-16T10:22:20Z",
+      "side": 1,
+      "message": "you can use HashSet instead of array if you want to prevent duplicates",
+      "range": {
+        "startLine": 553,
+        "startChar": 12,
+        "endLine": 555,
+        "endChar": 13
+      },
+      "revId": "2a61da1a07ffa7a8f0c5cf92c113513209c76567",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

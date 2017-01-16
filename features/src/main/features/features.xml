@@ -18,15 +18,10 @@
   <repository>mvn:org.opendaylight.dlux/features-dlux/${dlux.version}/xml/features</repository>
   <repository>mvn:org.opendaylight.dluxapps/features-dluxapps/${dluxapps.version}/xml/features</repository>
 
-  <feature name='odl-vbd-api' version='${project.version}' description='OpenDaylight :: vbd :: api'>
-    <feature version='${mdsal.model.version}'>odl-mdsal-models</feature>
-    <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-api/{{VERSION}}</bundle>
-  </feature>
-
   <feature name='odl-vbd' version='${project.version}' description='OpenDaylight :: vbd'>
     <feature version='${mdsal.version}'>odl-mdsal-binding</feature>
-    <feature version='${project.version}'>odl-vbd-api</feature>
     <feature version='${netconf.version}'>odl-netconf-clustered-topology</feature>
+        <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-api/{{VERSION}}</bundle>
     <bundle>mvn:org.opendaylight.honeycomb.vbd/vbd-impl/{{VERSION}}</bundle>
     <configfile finalname="${configfile.directory}/vbd.xml">mvn:org.opendaylight.honeycomb.vbd/vbd-impl/{{VERSION}}/xml/config</configfile>
   </feature>

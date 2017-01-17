@@ -8,18 +8,16 @@
 
 package org.opendaylight.vbd.impl;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
+
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
@@ -73,6 +71,13 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+
 /**
  *  Class which is used for manipulation with VPP
  */
@@ -87,6 +92,7 @@ final class VppModifier {
     private final VbdBridgeDomain vbdBridgeDomain;
     private TopologyVbridgeAugment config;
     private final InstanceIdentifier<BridgeDomain> iiBridgeDomainOnVPP;
+    private Set<NodeKey> nodesWithBridgeDomain = new HashSet<>();
 
     VppModifier(final DataBroker dataBroker, final MountPointService mountService, final String bridgeDomainName,
                 final VbdBridgeDomain vbdBridgeDomain) {
@@ -100,6 +106,10 @@ final class VppModifier {
     }
 
     ListenableFuture<Void> deleteBridgeDomainFromVppNode(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        if (!nodesWithBridgeDomain.contains(iiToVpp.getKey())) {
+            LOG.debug("Bridge domain {} not present on vpp node {} skipping...", vbdBridgeDomain, iiToVpp.getKey().getNodeId());
+            return Futures.immediateFuture(null);
+        }
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker == null) {
             LOG.warn("Got null data broker when attempting to delete bridge domain {}", bridgeDomainName);
@@ -109,6 +119,7 @@ final class VppModifier {
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully deleted bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
+            nodesWithBridgeDomain.remove(iiToVpp.getKey());
         } else {
             LOG.warn("Failed to delete bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
         }
@@ -542,6 +553,7 @@ final class VppModifier {
         if (vppDataBroker != null) {
             VbdNetconfTransaction.write(vppDataBroker, iiBridgeDomainOnVPP, prepareNewBridgeDomainData(),
                     VbdNetconfTransaction.RETRY_COUNT);
+            nodesWithBridgeDomain.add(iiToVpp.getKey());
             return Futures.immediateFuture(null);
         }
         return Futures.immediateFailedFuture(new IllegalStateException("Data broker for vpp is missing"));

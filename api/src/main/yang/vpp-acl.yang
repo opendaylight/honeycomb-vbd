@@ -163,7 +163,6 @@ module vpp-acl {
         choice ace-ip-version {
             description
               "IP version used in this Access List Entry.";
-            mandatory true;
             case ace-ipv4 {
               uses packet-fields:acl-ipv4-header-fields;
             }
@@ -228,7 +227,6 @@ module vpp-acl {
         choice ace-ip-version {
             description
               "IP version used in this Access List Entry.";
-            mandatory true;
             case ace-ipv4 {
               uses vpp-macip-ace-ipv4-header-fields;
             }
@@ -238,6 +236,18 @@ module vpp-acl {
           }
         uses vpp-macip-ace-eth-header-fields;
       }
+    }
+  }
+
+  augment /acl:access-lists/acl:acl {
+    ext:augment-identifier "vpp-acl-augmentation";
+    leaf tag {
+      type string {
+        length 1..63;
+      }
+      description
+        "ASCII tag that can be used as a placeholder for ACL metadata. Value is stored in vpp,
+         and returned in read requests. No processing involved.";
     }
   }
 }

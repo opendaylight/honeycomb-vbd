@@ -8,7 +8,6 @@
 
 package org.opendaylight.vbd.impl.transaction;
 
-import java.util.concurrent.ExecutionException;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.CheckedFuture;
@@ -32,6 +31,16 @@ public class VbdNetconfTransaction {
     public static final byte RETRY_COUNT = 5;
     private static final Logger LOG = LoggerFactory.getLogger(VbdNetconfTransaction.class);
 
+    /**
+     * Write data to remote device. Transaction is restarted if failed
+     *
+     * @param mountpoint   to access remote device
+     * @param iid          data identifier
+     * @param data         to write
+     * @param retryCounter number of attempts
+     * @param <T>          generic data type. Has to be child of {@link DataObject}
+     * @return true if transaction is successful, false otherwise
+     */
     public synchronized static <T extends DataObject> boolean write(final DataBroker mountpoint,
                                                                     final InstanceIdentifier<T> iid,
                                                                     final T data,
@@ -43,23 +52,30 @@ public class VbdNetconfTransaction {
             rwTx.put(LogicalDatastoreType.CONFIGURATION, iid, data, true);
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
-            LOG.trace("Netconf WRITE transaction done. Retry counter: {}", retryCounter);
+            LOG.trace("Netconf WRITE transaction done for {}", iid);
             return true;
-        } catch (IllegalStateException e) {
-            // TODO retry transaction - bug 7295
+        } catch (Exception e) {
+            // Retry
             if (retryCounter > 0) {
-                LOG.warn("Assuming that netconf write-transaction failed, restarting ...", e.getMessage());
+                LOG.warn("Netconf WRITE transaction failed to {}. Restarting transaction ... ", e.getMessage());
                 return write(mountpoint, iid, data, --retryCounter);
             } else {
-                LOG.warn("Netconf write-transaction failed. Maximal number of attempts reached", e.getMessage());
+                LOG.warn("Netconf WRITE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
                 return false;
             }
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.warn("Exception while writing data ...", e.getMessage());
-            return false;
         }
     }
 
+    /**
+     * Read data from remote device. Transaction is restarted if failed.
+     *
+     * @param mountpoint    to access remote device
+     * @param datastoreType {@link LogicalDatastoreType}
+     * @param iid           data identifier
+     * @param retryCounter  number of attempts
+     * @param <T>           generic data type. Has to be child of {@link DataObject}
+     * @return optional data object if successful, {@link Optional#absent()} if failed
+     */
     public synchronized static <T extends DataObject> Optional<T> read(final DataBroker mountpoint,
                                                                        final LogicalDatastoreType datastoreType,
                                                                        final InstanceIdentifier<T> iid,
@@ -72,49 +88,58 @@ public class VbdNetconfTransaction {
             final CheckedFuture<Optional<T>, ReadFailedException> futureData =
                     rTx.read(datastoreType, iid);
             data = futureData.get();
-            LOG.trace("Netconf READ transaction done. Data present: {}, Retry counter: {}",
-                    data.isPresent(), retryCounter);
+            LOG.trace("Netconf READ transaction done. Data present: {}", data.isPresent());
             return data;
-        } catch (IllegalStateException e) {
+        } catch (Exception e) {
             // Retry
             if (retryCounter > 0) {
-                LOG.warn("Assuming that netconf read-transaction failed, restarting ...", e.getMessage());
+                LOG.warn("Netconf READ transaction failed to {}. Restarting transaction ... ", e.getMessage());
                 rTx.close();
                 return read(mountpoint, datastoreType, iid, --retryCounter);
             } else {
-                LOG.warn("Netconf read-transaction failed. Maximal number of attempts reached", e.getMessage());
+                LOG.warn("Netconf READ transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
                 return Optional.absent();
             }
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.warn("Exception while reading data ...", e.getMessage());
-            return Optional.absent();
         }
     }
 
-    public synchronized static <T extends DataObject> boolean delete(final DataBroker mountpoint,
-                                                                     final InstanceIdentifier<T> iid,
-                                                                     byte retryCounter) {
-        LOG.trace("Netconf DELETE transaction started. RetryCounter: {}", retryCounter);
+    /**
+     * Remove data from remote device. Data are read and deleted only if exist. Transaction is restarted if failed.
+     *
+     * @param mountpoint   to access remote device
+     * @param iid          data identifier
+     * @param retryCounter number of attempts
+     * @param <T>          generic data type. Has to be child of {@link DataObject}
+     * @return true if transaction is successful, false otherwise
+     */
+    public synchronized static <T extends DataObject> boolean deleteIfExists(final DataBroker mountpoint,
+                                                                             final InstanceIdentifier<T> iid,
+                                                                             byte retryCounter) {
+        LOG.trace("Netconf DELETE transaction started. Data will be read at first. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
+        final Optional<T> optionalObject = read(mountpoint, LogicalDatastoreType.CONFIGURATION, iid, RETRY_COUNT);
+        if (!optionalObject.isPresent()) {
+            LOG.warn("Netconf DELETE transaction aborted. Data to remove are not present or cannot be read. Iid: {}",
+                    iid);
+            // Return true, this state is not considered as an error
+            return true;
+        }
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
         try {
             rwTx.delete(LogicalDatastoreType.CONFIGURATION, iid);
             final CheckedFuture<Void, TransactionCommitFailedException> futureTask = rwTx.submit();
             futureTask.get();
-            LOG.trace("Netconf DELETE transaction done. Retry counter: {}", retryCounter);
+            LOG.trace("Netconf DELETE transaction done for {}", iid);
             return true;
-        } catch (IllegalStateException e) {
+        } catch (Exception e) {
             // Retry
             if (retryCounter > 0) {
-                LOG.warn("Assuming that netconf delete-transaction failed, restarting ...", e.getMessage());
-                return delete(mountpoint, iid, --retryCounter);
+                LOG.warn("Netconf DELETE transaction failed to {}. Restarting transaction ... ", e.getMessage());
+                return deleteIfExists(mountpoint, iid, --retryCounter);
             } else {
-                LOG.warn("Netconf delete-transaction failed. Maximal number of attempts reached", e.getMessage());
+                LOG.warn("Netconf DELETE transaction unsuccessful. Maximal number of attempts reached. Trace: {}", e);
                 return false;
             }
-        } catch (InterruptedException | ExecutionException e) {
-            LOG.warn("Exception while removing data ...", e.getMessage());
-            return false;
         }
     }
 }

@@ -115,7 +115,7 @@ final class VppModifier {
             LOG.warn("Got null data broker when attempting to delete bridge domain {}", bridgeDomainName);
             return Futures.immediateFuture(null);
         }
-        final boolean transactionState = VbdNetconfTransaction.delete(vppDataBroker, this.iiBridgeDomainOnVPP,
+        final boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, this.iiBridgeDomainOnVPP,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully deleted bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
@@ -157,7 +157,7 @@ final class VppModifier {
         LOG.debug("Deleting interface {} from config DS on vpp {}, it was supporting bridge domain {}", intf.getName(), PPrint.node(iiToVpp), bridgeDomainName);
 
         final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToIntf = InstanceIdentifier.create(Interfaces.class).child(Interface.class, intf.getKey());
-        final boolean transactionState = VbdNetconfTransaction.delete(vppDataBroker, iiToIntf,
+        final boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, iiToIntf,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully deleted interface {}, which was supporting bridge domain {} on node {}",
@@ -628,7 +628,7 @@ final class VppModifier {
         final InstanceIdentifier<Interface> interfaceId = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                 new InterfaceKey(vxlanId)).builder().build();
         LOG.debug("Removing bridge domain from vxlan {} on node {}", vxlanId, vppNodeIid);
-        boolean transactionState = VbdNetconfTransaction.delete(vppDataBroker, interfaceId,
+        boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, interfaceId,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Bridge domain successfully removed from vxlan interface on node {}", vppNodeIid);

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public class VbdNetconfTransaction {
 
-    public static final byte RETRY_COUNT = 5;
+    public static final byte RETRY_COUNT = 3;
     private static final Logger LOG = LoggerFactory.getLogger(VbdNetconfTransaction.class);
 
     /**

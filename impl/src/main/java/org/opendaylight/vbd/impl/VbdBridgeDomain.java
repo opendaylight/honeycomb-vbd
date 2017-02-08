@@ -103,7 +103,6 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     private final DataBroker dataBroker;
     private final KeyedInstanceIdentifier<Topology, TopologyKey> topology;
     @GuardedBy("this")
-
     private final BindingTransactionChain chain;
     private final ListenerRegistration<?> reg;
     private final MountPointService mountService;
@@ -118,20 +117,19 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
 
     private VbdBridgeDomain(final DataBroker dataBroker, final MountPointService mountService, final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
                             final BindingTransactionChain chain, VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
+        this.chain = Preconditions.checkNotNull(chain);
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.topology = Preconditions.checkNotNull(topology);
         this.bridgeDomainName = topology.getKey().getTopologyId().getValue();
         this.vniValue = leverageVxlanVni(topology);
         this.vppModifier = new VppModifier(mountService, bridgeDomainName, this);
-        this.chain = Preconditions.checkNotNull(chain);
         this.mountService = mountService;
         this.tunnelIdAllocator = tunnelIdAllocator;
-
         this.iiBridgeDomainOnVPPRest = VbdUtil.provideIidBridgeDomainOnVPPRest(bridgeDomainName);
 
-        wipeOperationalState(topology, chain);
-        createFreshOperationalState(topology, chain);
-        readParams(topology, chain);
+        wipeOperationalState(topology);
+        createFreshOperationalState(topology);
+        readParams(topology);
 
         reg = dataBroker.registerDataTreeChangeListener(
                 new DataTreeIdentifier<>(LogicalDatastoreType.CONFIGURATION, topology), this);
@@ -173,8 +171,8 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
 
                 @Override
                 public void onFailure(@Nonnull Throwable throwable) {
-                    LOG.warn("Topology change for {} bridge domain {} failed", modification.getModificationType(),
-                            PPrint.topology(topology));
+                    LOG.warn("Topology change {} for bridge domain {} failed: {}", modification.getModificationType(),
+                            PPrint.topology(topology), throwable);
                 }
             });
         }
@@ -354,15 +352,14 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         }
     }
 
-    private ListenableFuture<Void> wipeOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, final BindingTransactionChain chain) {
+    private ListenableFuture<Void> wipeOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         LOG.info("Wiping operational state of {}", PPrint.topology(topology));
-
         final WriteTransaction tx = chain.newWriteOnlyTransaction();
         tx.delete(LogicalDatastoreType.OPERATIONAL, topology);
         return tx.submit();
     }
 
-    private void createFreshOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, final BindingTransactionChain chain) {
+    private void createFreshOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         LOG.info("Creating fresh operational state for {}", PPrint.topology(topology));
 
         final WriteTransaction tx = chain.newWriteOnlyTransaction();
@@ -370,7 +367,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         tx.submit();
     }
 
-    private void readParams(final KeyedInstanceIdentifier<Topology, TopologyKey> topology, final BindingTransactionChain chain) {
+    private void readParams(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         final ReadOnlyTransaction tx = chain.newReadOnlyTransaction();
         Futures.addCallback(tx.read(LogicalDatastoreType.CONFIGURATION, topology), new FutureCallback<Optional<Topology>>() {
             @Override
@@ -392,7 +389,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     @Nonnull
     static VbdBridgeDomain create(final DataBroker dataBroker, final MountPointService mountService,
                                   final KeyedInstanceIdentifier<Topology, TopologyKey> topology,
-                                  final BindingTransactionChain chain,
+                                  @Nonnull final BindingTransactionChain chain,
                                   final VxlanTunnelIdAllocator tunnelIdAllocator) throws Exception {
         return new VbdBridgeDomain(dataBroker, mountService, topology, chain, tunnelIdAllocator);
     }
@@ -401,14 +398,12 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         // TODO better be to return future
         LOG.debug("Bridge domain {} for {} going down", this, PPrint.topology(topology));
         reg.close();
-        chain.close();
         LOG.info("Bridge domain {} for {} is down", this, PPrint.topology(topology));
     }
 
     synchronized void stop() {
         LOG.debug("Bridge domain {} for {} shutting down", this, PPrint.topology(topology));
-
-        wipeOperationalState(topology, chain);
+        wipeOperationalState(topology);
         chain.close();
     }
 
@@ -418,7 +413,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         final NodeId deletedNodeId = vbdNode.getKey().getNodeId();
 
         // read the topology to find the links
-        final ReadOnlyTransaction rTx = chain.newReadOnlyTransaction();
+        final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
         return Futures.transform(rTx.read(LogicalDatastoreType.OPERATIONAL, topology), (AsyncFunction<Optional<Topology>,
                 List<InstanceIdentifier<Link>>>) result -> {
             final List<InstanceIdentifier<Link>> prunableLinks = new ArrayList<>();
@@ -462,7 +457,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                 }
 
                 for (final InstanceIdentifier<Link> linkIID : result) {
-                    final WriteTransaction wTx = chain.newWriteOnlyTransaction();
+                    final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();
                     wTx.delete(LogicalDatastoreType.OPERATIONAL, linkIID);
                     Futures.addCallback(wTx.submit(), new FutureCallback<Void>() {
                         @Override
@@ -485,13 +480,14 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         });
     }
 
-    private ListenableFuture<Void> removeNodeFromBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> vppNode, final KeyedInstanceIdentifier<Node, NodeKey> backingNode) {
+    private ListenableFuture<Void> removeNodeFromBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> vppNode,
+                                                              final KeyedInstanceIdentifier<Node, NodeKey> backingNode) {
         LOG.debug("Removing node {} from bridge domain {}", PPrint.node(vppNode), bridgeDomainName);
         final ListenableFuture<Void> deleteNodeTask = vppModifier.deleteBridgeDomainFromVppNode(vppNode);
         pruneLinks(backingNode);
 
         // remove this node from vbd operational topology
-        final WriteTransaction wTx3 = chain.newWriteOnlyTransaction();
+        final WriteTransaction wTx3 = dataBroker.newWriteOnlyTransaction();
         wTx3.delete(LogicalDatastoreType.OPERATIONAL, backingNode);
 
         Futures.addCallback(wTx3.submit(), new FutureCallback<Void>() {

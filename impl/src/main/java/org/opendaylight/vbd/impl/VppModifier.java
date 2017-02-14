@@ -61,6 +61,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.UserInterface;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.SubinterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.interfaces._interface.SubInterfaces;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.interfaces._interface.sub.interfaces.SubInterface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.interfaces._interface.sub.interfaces.SubInterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
@@ -104,6 +108,7 @@ final class VppModifier {
             return Futures.immediateFuture(null);
         }
         // Remove bridge domain from interfaces
+        // TODO remove vlan sub-interfaces
         findInterfacesWithAssignedBridgeDomain(vppDataBroker);
         final boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, this.iiBridgeDomainOnVPP,
                 VbdNetconfTransaction.RETRY_COUNT);
@@ -618,24 +623,49 @@ final class VppModifier {
             for (final Interface bdInterface : interfaceList) {
                 final VppInterfaceAugmentation interfaceAugmentation =
                         bdInterface.getAugmentation(VppInterfaceAugmentation.class);
-                // Verify augmentation presence
-                if (interfaceAugmentation == null || interfaceAugmentation.getL2() == null) {
-                    continue;
-                }
-                final L2 l2 = interfaceAugmentation.getL2();
-                final Interconnection interconnection = l2.getInterconnection();
-                if (interconnection != null && interconnection instanceof BridgeBased) {
-                    final BridgeBased bridgeBased = (BridgeBased) interconnection;
-                    if (bridgeDomainName.equals(bridgeBased.getBridgeDomain())) {
-                        LOG.trace("Interface {} has assigned bd which will be removed. Disconnecting ...",
-                                bdInterface.getName());
-                        final InstanceIdentifier<L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
-                                .child(Interface.class, bdInterface.getKey()).augmentation(VppInterfaceAugmentation.class)
-                                .child(L2.class).builder().build();
-                        VbdNetconfTransaction.deleteIfExists(vppDataBroker, augmentationIid, VbdNetconfTransaction.RETRY_COUNT);
-                        LOG.trace("Bridge domain {} removed from interface {}", bridgeDomainName, bdInterface.getName());
+                final SubinterfaceAugmentation subInterfaceAugmentation =
+                        bdInterface.getAugmentation(SubinterfaceAugmentation.class);
+                // Vxlan case
+                if (interfaceAugmentation != null && interfaceAugmentation.getL2() != null) {
+                    final L2 l2 = interfaceAugmentation.getL2();
+                    final Interconnection interconnection = l2.getInterconnection();
+                    if (interconnection != null && interconnection instanceof BridgeBased) {
+                        final BridgeBased bridgeBased = (BridgeBased) interconnection;
+                        if (bridgeDomainName.equals(bridgeBased.getBridgeDomain())) {
+                            LOG.trace("Interface {} has assigned bd which will be removed. Disconnecting ...",
+                                    bdInterface.getName());
+                            final InstanceIdentifier<L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
+                                    .child(Interface.class, bdInterface.getKey()).augmentation(VppInterfaceAugmentation.class)
+                                    .child(L2.class).builder().build();
+                            VbdNetconfTransaction.deleteIfExists(vppDataBroker, augmentationIid, VbdNetconfTransaction.RETRY_COUNT);
+                            LOG.trace("Bridge domain {} removed from interface {}", bridgeDomainName, bdInterface.getName());
+                        }
                     }
                 }
+                // Vlan case
+                if (subInterfaceAugmentation != null) {
+                    final SubInterfaces subInterfaces = subInterfaceAugmentation.getSubInterfaces();
+                    for (SubInterface subInterface : subInterfaces.getSubInterface()) {
+                        final org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.sub._interface.base.attributes.L2 l2 = subInterface.getL2();
+                        if (l2 != null && l2.getInterconnection() != null) {
+                            final Interconnection interconnection = l2.getInterconnection();
+                            if (interconnection instanceof BridgeBased) {
+                                final BridgeBased bridgeBased = (BridgeBased) interconnection;
+                                if (bridgeDomainName.equals(bridgeBased.getBridgeDomain())) {
+                                    LOG.trace("Sub-interface {} has assigned bd which will be removed. Disconnecting ...",
+                                            bdInterface.getName());
+                                    final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.sub._interface.base.attributes.L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
+                                            .child(Interface.class, bdInterface.getKey()).augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class)
+                                            .child(SubInterface.class, new SubInterfaceKey(subInterface.getKey()))
+                                            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.sub._interface.base.attributes.L2.class).builder().build();
+                                    VbdNetconfTransaction.deleteIfExists(vppDataBroker, augmentationIid, VbdNetconfTransaction.RETRY_COUNT);
+                                    LOG.trace("Bridge domain {} removed from sub-interface {}", bridgeDomainName, bdInterface.getName());
+                                }
+                            }
+                        }
+                    }
+                }
+
             }
             return;
         }

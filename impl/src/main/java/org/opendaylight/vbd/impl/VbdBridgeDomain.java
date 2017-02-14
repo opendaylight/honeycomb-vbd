@@ -334,22 +334,31 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         LOG.debug("Removing node from BD. Node: {}. backing node: {}", PPrint.node(vppNodeIid),
                 PPrint.node(backingNodeIid));
         final ListenableFuture<Void> removeNodeTask = removeNodeFromBridgeDomain(vppNodeIid, backingNodeIid);
-        if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
-            return Futures.transform(removeNodeTask, new Function<Void, Void>() {
-                @Nullable
-                @Override
-                public Void apply(@Nullable Void input) {
-                    try {
-                        return removeVxlanInterfaces(deletedNode.getNodeId()).get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        LOG.warn("Remove vxlan interfaces processing failed. Node: {}", deletedNode.getNodeId());
-                        return null;
-                    }
+        return Futures.transform(removeNodeTask, new Function<Void, Void>() {
+            @Nullable
+            @Override
+            public Void apply(@Nullable Void input) {
+                ListenableFuture<Void> future = Futures.immediateFuture(null);
+                String message = null;
+                // Vxlan case
+                if (config.getTunnelType().equals(TunnelTypeVxlan.class)) {
+                    future = removeVxlanInterfaces(deletedNode.getNodeId());
+                    message = String.format("Remove vxlan interfaces processing failed. Node: %s", deletedNode.getNodeId());
+                // Vlan case
+                } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
+                    future = removeVlanSubInterface(deletedNode);
+                    message = String.format("Remove vlan sub-interface processing failed. Node: %s", deletedNode.getNodeId());
+                } else {
+                    LOG.warn("Unknown interface type: {}", config.getTunnelType());
                 }
-            });
-        } else {
-            return removeNodeTask;
-        }
+                try {
+                    return future.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    LOG.warn(message);
+                    return null;
+                }
+            }
+        });
     }
 
     private ListenableFuture<Void> wipeOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
@@ -421,7 +430,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             if (result.isPresent()) {
                 final List<Link> links = result.get().getLink();
 
-                for (final Link link : links) {
+                for (final Link link : nullToEmpty(links)) {
                     // check if this link's source or destination matches the deleted node
                     final Source src = link.getSource();
                     final Destination dst = link.getDestination();
@@ -534,6 +543,35 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
         } else {
             LOG.warn("Failed to write subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
+        }
+        return Futures.immediateFuture(null);
+    }
+
+    private ListenableFuture<Void> removeVlanSubInterface(final Node node) {
+        final NodeId nodeId = node.getNodeId();
+        final NodeVbridgeVlanAugment vlanAugmentation = node.getAugmentation(NodeVbridgeVlanAugment.class);
+        if (vlanAugmentation == null || vlanAugmentation.getSuperInterface() == null) {
+            LOG.warn("Unable to remove sub-interface from node {} - does not contain vlan augmentation ", nodeId);
+            return Futures.immediateFuture(null);
+        }
+        final KeyedInstanceIdentifier<Node, NodeKey> nodeIid = nodesToVpps.get(nodeId).iterator().next();
+        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(nodeIid, mountService);
+        if (vppDataBroker == null) {
+            LOG.warn("Cannot get data broker to delete sub-interface from node {}", nodeId);
+            return Futures.immediateFuture(null);
+        }
+        final VlanNetworkParameters params = (VlanNetworkParameters) config.getTunnelParameters();
+        final SubInterface subInterface = VbdUtil.createSubInterface(params.getVlanId(), params.getVlanType(), bridgeDomainName);
+        final KeyedInstanceIdentifier<SubInterface, SubInterfaceKey> subInterfaceIid = InstanceIdentifier.create(Interfaces.class)
+                .child(Interface.class, new InterfaceKey(vlanAugmentation.getSuperInterface()))
+                .augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class).child(SubInterface.class,
+                        new SubInterfaceKey(subInterface.getKey()));
+        final boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, subInterfaceIid,
+                VbdNetconfTransaction.RETRY_COUNT);
+        if (transactionState) {
+            LOG.debug("Sub-interface {} removed from node {}", vlanAugmentation.getSuperInterface(), nodeId);
+        } else {
+            LOG.warn("Failed to remove sub-interface {} from node {}", vlanAugmentation.getSuperInterface(), nodeId);
         }
         return Futures.immediateFuture(null);
     }
@@ -774,6 +812,13 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             LOG.warn("Topology cannot be read, cause {}", e);
             return null;
         }
+    }
+
+    private <T> List<T> nullToEmpty(final List<T> list) {
+        if (list == null) {
+            return Collections.emptyList();
+        }
+        return list;
     }
 
     // Transform future util method

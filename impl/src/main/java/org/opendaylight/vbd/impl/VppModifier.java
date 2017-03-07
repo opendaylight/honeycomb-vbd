@@ -109,8 +109,8 @@ final class VppModifier {
         }
         // Remove bridge domain from interfaces
         findInterfacesWithAssignedBridgeDomain(vppDataBroker);
-        final boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, this.iiBridgeDomainOnVPP,
-                VbdNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState = VbdNetconfTransaction.netconfWrapper(vppDataBroker, this.iiBridgeDomainOnVPP,
+                VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.DELETE);
         if (transactionState) {
             LOG.debug("Successfully deleted bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
             nodesWithBridgeDomain.remove(iiToVpp.getKey());
@@ -151,8 +151,8 @@ final class VppModifier {
         LOG.debug("Deleting interface {} from config DS on vpp {}, it was supporting bridge domain {}", intf.getName(), PPrint.node(iiToVpp), bridgeDomainName);
 
         final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToIntf = InstanceIdentifier.create(Interfaces.class).child(Interface.class, intf.getKey());
-        final boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, iiToIntf,
-                VbdNetconfTransaction.RETRY_COUNT);
+        final boolean transactionState = VbdNetconfTransaction.netconfWrapper(vppDataBroker, iiToIntf,
+                VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.DELETE);
         if (transactionState) {
             LOG.debug("Successfully deleted interface {}, which was supporting bridge domain {} on node {}",
                     intf.getName(), bridgeDomainName, PPrint.node(iiToVpp));
@@ -374,8 +374,8 @@ final class VppModifier {
             final String vxlanId = VbdUtil.provideVxlanId(potentialExistingInterfaceTunnelId);
             final InstanceIdentifier<L2> l2Iid = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                     new InterfaceKey(vxlanId)).augmentation(VppInterfaceAugmentation.class).child(L2.class).builder().build();
-            boolean transactionState = VbdNetconfTransaction.write(vppDataBroker, l2Iid, l2Data,
-                    VbdNetconfTransaction.RETRY_COUNT);
+            boolean transactionState = VbdNetconfTransaction.netconfWrapper(vppDataBroker, l2Iid, l2Data,
+                    VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.WRITE);
             if (transactionState) {
                 LOG.debug("Writing bridge domain into super virtual interface to {} finished successfully.",
                         PPrint.node(iidToVpp));
@@ -393,8 +393,8 @@ final class VppModifier {
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                     new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
             LOG.debug("Submitting new interface to config store...");
-            boolean transactionState = VbdNetconfTransaction.write(vppDataBroker, iidToInterface, interfaceData,
-                    VbdNetconfTransaction.RETRY_COUNT);
+            boolean transactionState = VbdNetconfTransaction.netconfWrapper(vppDataBroker, iidToInterface, interfaceData,
+                    VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.WRITE);
             if (transactionState) {
                 LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iidToVpp));
             } else {
@@ -507,8 +507,8 @@ final class VppModifier {
                             .child(Interface.class, new InterfaceKey(userInterface.getValue()));
             InstanceIdentifier<L2> iiToV3poL2 = iiToVpp.augmentation(VppInterfaceAugmentation.class).child(L2.class);
             LOG.debug("Writing L2 data to configuration DS to concrete interface.");
-            VbdNetconfTransaction.write(vppDataBroker, iiToV3poL2,  prepareL2Data(false, null),
-                    VbdNetconfTransaction.RETRY_COUNT);
+            VbdNetconfTransaction.netconfWrapper(vppDataBroker, iiToV3poL2,  prepareL2Data(false, null),
+                    VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.WRITE);
         }
         return Futures.immediateFuture(null);
     }
@@ -516,8 +516,8 @@ final class VppModifier {
     ListenableFuture<Void> addVppToBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {
-            VbdNetconfTransaction.write(vppDataBroker, iiBridgeDomainOnVPP, prepareNewBridgeDomainData(),
-                    VbdNetconfTransaction.RETRY_COUNT);
+            VbdNetconfTransaction.netconfWrapper(vppDataBroker, iiBridgeDomainOnVPP, prepareNewBridgeDomainData(),
+                    VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.WRITE);
             nodesWithBridgeDomain.add(iiToVpp.getKey());
             return Futures.immediateFuture(null);
         }
@@ -594,8 +594,8 @@ final class VppModifier {
         final InstanceIdentifier<Interface> interfaceId = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                 new InterfaceKey(vxlanId)).builder().build();
         LOG.debug("Removing bridge domain from vxlan {} on node {}", vxlanId, vppNodeIid);
-        boolean transactionState = VbdNetconfTransaction.deleteIfExists(vppDataBroker, interfaceId,
-                VbdNetconfTransaction.RETRY_COUNT);
+        boolean transactionState = VbdNetconfTransaction.netconfWrapper(vppDataBroker, interfaceId,
+                VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.DELETE);
         if (transactionState) {
             LOG.debug("Bridge domain successfully removed from vxlan interface on node {}", vppNodeIid);
         } else {
@@ -636,7 +636,8 @@ final class VppModifier {
                             final InstanceIdentifier<L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
                                     .child(Interface.class, bdInterface.getKey()).augmentation(VppInterfaceAugmentation.class)
                                     .child(L2.class).builder().build();
-                            VbdNetconfTransaction.deleteIfExists(vppDataBroker, augmentationIid, VbdNetconfTransaction.RETRY_COUNT);
+                            VbdNetconfTransaction.netconfWrapper(vppDataBroker, augmentationIid,
+                                VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.DELETE);
                             LOG.trace("Bridge domain {} removed from interface {}", bridgeDomainName, bdInterface.getName());
                         }
                     }
@@ -657,7 +658,8 @@ final class VppModifier {
                                             .child(Interface.class, bdInterface.getKey()).augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class)
                                             .child(SubInterface.class, new SubInterfaceKey(subInterface.getKey()))
                                             .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.sub._interface.base.attributes.L2.class).builder().build();
-                                    VbdNetconfTransaction.deleteIfExists(vppDataBroker, augmentationIid, VbdNetconfTransaction.RETRY_COUNT);
+                                    VbdNetconfTransaction.netconfWrapper(vppDataBroker, augmentationIid,
+                                        VbdNetconfTransaction.RETRY_COUNT, VbdNetconfTransaction.Operation.DELETE);
                                     LOG.trace("Bridge domain {} removed from sub-interface {}", bridgeDomainName, bdInterface.getName());
                                 }
                             }

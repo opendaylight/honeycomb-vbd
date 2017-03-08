@@ -4,6 +4,8 @@
 .settings
 target
 *.iml
+*.ipr
+*.iws
 .idea
 bin
 xtend-gen

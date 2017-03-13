@@ -536,7 +536,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             LOG.warn("Cannot get data broker to write interface to node {}", PPrint.node(nodeIID));
             return Futures.immediateFuture(null);
         }
-        final boolean transactionState = VbdNetconfTransaction.write(vppDataBroker, iiToVlanSubIntf, subIntf,
+        final boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(vppDataBroker, iiToVlanSubIntf, subIntf,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());

@@ -25,6 +25,30 @@
     },
     {
       "key": {
+        "uuid": "fafc7978_f0bc0308",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-13T11:47:42Z",
+      "side": 1,
+      "message": "we use this lock in another code in GBP, that is why it is public.",
+      "parentUuid": "fafc7978_b50eed38",
+      "range": {
+        "startLine": 36,
+        "startChar": 3,
+        "endLine": 36,
+        "endChar": 75
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fafc7978_d5ff3100",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
         "patchSetId": 4
@@ -36,6 +60,30 @@
       "writtenOn": "2017-03-13T11:04:25Z",
       "side": 1,
       "message": "ReentrantLock used this way does not differ from synchronized keyword (unless you use lock reference in other part of your code, but I can\u0027t find it in this commit).",
+      "range": {
+        "startLine": 51,
+        "startChar": 7,
+        "endLine": 53,
+        "endChar": 32
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_7025b35a",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-13T11:47:42Z",
+      "side": 1,
+      "message": "Yes, that is true, but we use the reentrant lock from GBP code. We had no other choice to create a simple synchronization mechanism between GBP and VBD. This will be probably removed when netconf will handle paralel transactions. For now this is a workaround that we use to get things working again.",
+      "parentUuid": "fafc7978_d5ff3100",
       "range": {
         "startLine": 51,
         "startChar": 7,
@@ -71,6 +119,30 @@
     },
     {
       "key": {
+        "uuid": "fafc7978_50286f32",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 83,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-13T11:47:42Z",
+      "side": 1,
+      "message": "no, will remove.",
+      "parentUuid": "fafc7978_f01b6370",
+      "range": {
+        "startLine": 83,
+        "startChar": 12,
+        "endLine": 83,
+        "endChar": 24
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fafc7978_9010174f",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
         "patchSetId": 4
@@ -94,6 +166,30 @@
     },
     {
       "key": {
+        "uuid": "fafc7978_303a0b99",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 118,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-13T11:47:42Z",
+      "side": 1,
+      "message": "Read transactions didn`t cause problems, they can be done in paralel not like write/delete transactions. So for now they are not synchronized.",
+      "parentUuid": "fafc7978_9010174f",
+      "range": {
+        "startLine": 118,
+        "startChar": 66,
+        "endLine": 118,
+        "endChar": 70
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fafc7978_d0161f48",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
         "patchSetId": 4
@@ -105,6 +201,30 @@
       "writtenOn": "2017-03-13T11:04:25Z",
       "side": 1,
       "message": "do you need another lock?",
+      "range": {
+        "startLine": 154,
+        "startChar": 12,
+        "endLine": 154,
+        "endChar": 24
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_b0227b4f",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 154,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-13T11:47:42Z",
+      "side": 1,
+      "message": "no, will remove",
+      "parentUuid": "fafc7978_d0161f48",
       "range": {
         "startLine": 154,
         "startChar": 12,

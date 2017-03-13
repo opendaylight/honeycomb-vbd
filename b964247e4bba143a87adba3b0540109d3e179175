@@ -49,6 +49,30 @@
     },
     {
       "key": {
+        "uuid": "fafc7978_50ad0f9a",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T12:02:59Z",
+      "side": 1,
+      "message": "would be good to document that it is workaround (add bugzilla link if exists) and how it is used",
+      "parentUuid": "fafc7978_f0bc0308",
+      "range": {
+        "startLine": 36,
+        "startChar": 3,
+        "endLine": 36,
+        "endChar": 75
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
         "uuid": "fafc7978_d5ff3100",
         "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
         "patchSetId": 4
@@ -178,6 +202,30 @@
       "side": 1,
       "message": "Read transactions didn`t cause problems, they can be done in paralel not like write/delete transactions. So for now they are not synchronized.",
       "parentUuid": "fafc7978_9010174f",
+      "range": {
+        "startLine": 118,
+        "startChar": 66,
+        "endLine": 118,
+        "endChar": 70
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_f0c6c366",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 118,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T12:02:59Z",
+      "side": 1,
+      "message": "reads were using the same lock as writes before your change...",
+      "parentUuid": "fafc7978_303a0b99",
       "range": {
         "startLine": 118,
         "startChar": 66,

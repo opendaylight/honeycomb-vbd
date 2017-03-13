@@ -1,0 +1,119 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fafc7978_b50eed38",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 36,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T11:04:25Z",
+      "side": 1,
+      "message": "why is it public?",
+      "range": {
+        "startLine": 36,
+        "startChar": 3,
+        "endLine": 36,
+        "endChar": 75
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_d5ff3100",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 53,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T11:04:25Z",
+      "side": 1,
+      "message": "ReentrantLock used this way does not differ from synchronized keyword (unless you use lock reference in other part of your code, but I can\u0027t find it in this commit).",
+      "range": {
+        "startLine": 51,
+        "startChar": 7,
+        "endLine": 53,
+        "endChar": 32
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_f01b6370",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 83,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T11:04:25Z",
+      "side": 1,
+      "message": "do you need another lock?",
+      "range": {
+        "startLine": 83,
+        "startChar": 12,
+        "endLine": 83,
+        "endChar": 24
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_9010174f",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 118,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T11:04:25Z",
+      "side": 1,
+      "message": "don\u0027t you also want to synchronize reads?",
+      "range": {
+        "startLine": 118,
+        "startChar": 66,
+        "endLine": 118,
+        "endChar": 70
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_d0161f48",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 4
+      },
+      "lineNbr": 154,
+      "author": {
+        "id": 5719
+      },
+      "writtenOn": "2017-03-13T11:04:25Z",
+      "side": 1,
+      "message": "do you need another lock?",
+      "range": {
+        "startLine": 154,
+        "startChar": 12,
+        "endLine": 154,
+        "endChar": 24
+      },
+      "revId": "b964247e4bba143a87adba3b0540109d3e179175",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

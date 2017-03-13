@@ -8,6 +8,10 @@
 
 package org.opendaylight.vbd.impl.transaction;
 
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.annotation.Nonnull;
+
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.CheckedFuture;
@@ -29,7 +33,45 @@ import org.slf4j.LoggerFactory;
 public class VbdNetconfTransaction {
 
     public static final byte RETRY_COUNT = 3;
+    public static final ReentrantLock REENTRANT_LOCK = new ReentrantLock();
+
     private static final Logger LOG = LoggerFactory.getLogger(VbdNetconfTransaction.class);
+
+    /***
+     * Netconf wrapper method for synced requests for write operation on a Netconf Device
+     * @param mountpoint    netconf device
+     * @param iid           path for Data to be written to
+     * @param data          data to be written
+     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * @param <T>           data type
+     * @return true if transaction is successful, false otherwise
+     */
+    public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final DataBroker mountpoint,
+                                                                    @Nonnull final InstanceIdentifier<T> iid,
+                                                                    @Nonnull final T data,
+                                                                    byte retryCounter) {
+        REENTRANT_LOCK.lock();
+        boolean result = write(mountpoint, iid, data, retryCounter);
+        REENTRANT_LOCK.unlock();
+        return result;
+    }
+
+    /***
+     * Netconf wrapper method for synced requests for delete operation on a Netconf Device
+     * @param mountpoint    netconf device
+     * @param iid           path for Data to be written to
+     * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
+     * @param <T>           data type
+     * @return true if transaction is successful, false otherwise
+     */
+    public static <T extends DataObject> boolean netconfSyncedDelete(@Nonnull final DataBroker mountpoint,
+                                                                     @Nonnull final InstanceIdentifier<T> iid,
+                                                                     byte retryCounter) {
+        REENTRANT_LOCK.lock();
+        boolean result = deleteIfExists(mountpoint, iid, retryCounter);
+        REENTRANT_LOCK.unlock();
+        return result;
+    }
 
     /**
      * Write data to remote device. Transaction is restarted if failed
@@ -41,10 +83,10 @@ public class VbdNetconfTransaction {
      * @param <T>          generic data type. Has to be child of {@link DataObject}
      * @return true if transaction is successful, false otherwise
      */
-    public synchronized static <T extends DataObject> boolean write(final DataBroker mountpoint,
-                                                                    final InstanceIdentifier<T> iid,
-                                                                    final T data,
-                                                                    byte retryCounter) {
+    private static <T extends DataObject> boolean write(final DataBroker mountpoint,
+                                                        final InstanceIdentifier<T> iid,
+                                                        final T data,
+                                                        byte retryCounter) {
         LOG.trace("Netconf WRITE transaction started. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
         final ReadWriteTransaction rwTx = mountpoint.newReadWriteTransaction();
@@ -112,9 +154,9 @@ public class VbdNetconfTransaction {
      * @param <T>          generic data type. Has to be child of {@link DataObject}
      * @return true if transaction is successful, false otherwise
      */
-    public synchronized static <T extends DataObject> boolean deleteIfExists(final DataBroker mountpoint,
-                                                                             final InstanceIdentifier<T> iid,
-                                                                             byte retryCounter) {
+    private static <T extends DataObject> boolean deleteIfExists(final DataBroker mountpoint,
+                                                                 final InstanceIdentifier<T> iid,
+                                                                 byte retryCounter) {
         LOG.trace("Netconf DELETE transaction started. Data will be read at first. RetryCounter: {}", retryCounter);
         Preconditions.checkNotNull(mountpoint);
         final Optional<T> optionalObject = read(mountpoint, LogicalDatastoreType.CONFIGURATION, iid, RETRY_COUNT);

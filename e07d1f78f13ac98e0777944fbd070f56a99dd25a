@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fafc7978_35bdddd8",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 56,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2017-03-13T09:59:42Z",
+      "side": 1,
+      "message": "Please reconsider \"wrapper\" in method name. No need for describing how it works. You can add a comment for that if you like. Netconf netconfSyncedReq, netconfSecheduledReq, or whatever you like would be more addressing.",
+      "range": {
+        "startLine": 56,
+        "startChar": 68,
+        "endLine": 56,
+        "endChar": 76
+      },
+      "revId": "e07d1f78f13ac98e0777944fbd070f56a99dd25a",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_15953932",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/transaction/VbdNetconfTransaction.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 75,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2017-03-13T09:59:42Z",
+      "side": 1,
+      "message": "There is only one possible operation - delete. Therefore it does not have to be specified as an argument.\n\n\nThe following is optional, on your consideration:\n\nTo make it more transparent, I\u0027d:\nmake the above method for writing and this one for deleting\nor\nremove this method and check if T data !\u003d null for WRITE in the method above. A javadoc should be updated in that case.",
+      "range": {
+        "startLine": 75,
+        "startChar": 60,
+        "endLine": 75,
+        "endChar": 79
+      },
+      "revId": "e07d1f78f13ac98e0777944fbd070f56a99dd25a",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

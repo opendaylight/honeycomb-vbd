@@ -8,9 +8,6 @@
 
 package org.opendaylight.vbd.impl;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -20,16 +17,11 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
-import com.google.common.util.concurrent.AsyncFunction;
-import com.google.common.util.concurrent.CheckedFuture;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
+
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -88,6 +80,17 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+import com.google.common.util.concurrent.AsyncFunction;
+import com.google.common.util.concurrent.CheckedFuture;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Implementation of a single Virtual Bridge Domain. It is bound to a particular network topology instance, manages
@@ -557,7 +560,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     private List<Ipv4AddressNoZone> getTunnelEndpoints(final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp,
                                                        final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp) {
         try {
-            return vppModifier.readIpAddressesFromVpps(iiToSrcVpp, iiToDstVpp).stream()
+            return vppModifier.readIpAddressesFromVpps(dataBroker, iiToSrcVpp, iiToDstVpp).stream()
             .filter(Objects::nonNull)
             .filter(Optional::isPresent)
             .map(Optional::get)

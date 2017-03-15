@@ -24,15 +24,18 @@ public class VbdInstance implements AutoCloseable, ClusterSingletonService {
     private final MountPointService mountService;
     private ClusterSingletonServiceRegistration singletonServiceRegistration;
     private VirtualBridgeDomainManager vbdManager;
+    private String virtualDomainInterfaces;
 
     public VbdInstance(final DataBroker dataBroker,
                        final BindingAwareBroker bindingAwareBroker,
-                       final ClusterSingletonServiceProvider clusterProvider) {
+                       final ClusterSingletonServiceProvider clusterProvider,
+                       final String virtualDomainInterfaces) {
         final BindingAwareBroker.ProviderContext session = Preconditions.checkNotNull(bindingAwareBroker)
                 .registerProvider(new VbdProvider());
         this.dataBroker = Preconditions.checkNotNull(dataBroker);
         this.mountService = Preconditions.checkNotNull(session.getSALService(MountPointService.class));
         this.clusterProvider = Preconditions.checkNotNull(clusterProvider);
+        this.virtualDomainInterfaces = virtualDomainInterfaces;
     }
 
     public void initialize() {
@@ -48,7 +51,7 @@ public class VbdInstance implements AutoCloseable, ClusterSingletonService {
     @Override
     public void instantiateServiceInstance() {
         LOG.info("Instantiating {}", this.getClass().getSimpleName());
-        vbdManager = VirtualBridgeDomainManager.create(dataBroker, mountService);
+        vbdManager = VirtualBridgeDomainManager.create(dataBroker, mountService, virtualDomainInterfaces);
     }
 
     @Override

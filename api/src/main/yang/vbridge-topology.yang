@@ -127,6 +127,34 @@ module vbridge-topology {
         }
     }
 
+    augment "/nt:network-topology/nt:topology" {
+        ext:augment-identifier "topology-vbridge-cfg-augment";
+        when "class = 'vbridge-startup-config'";
+
+        container vbridge-startup-config {
+            presence "Label for startup config.";
+            description "Topology used for displaying startup
+            VBridge nodes configuration defined in ODL.";
+        }
+    }
+
+    augment "/nt:network-topology/nt:topology/nt:node/nt:termination-point" {
+        ext:augment-identifier "termination-point-vbridge-cfg-augment";
+        when "../../vbridge-startup-config";
+
+        choice interface-type {
+            container virtual-domain-carrier {
+                presence "Label for startup config.";
+                description
+                    "Reference to the physical network element interface, which
+                     can be used as a super interface for VLAN sub-interfaces
+                     or which IP address can be specified as source or destination
+                     of encapsulated VXLAN traffic.";
+                config false;
+            }
+        }
+    }
+
     augment "/nt:network-topology/nt:topology/nt:link" {
         when "../nt:topology-types/vbridge-topology";
         ext:augment-identifier "link-vbridge-augment";

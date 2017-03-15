@@ -65,7 +65,9 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.sub._interface.base.attributes.l2.RewriteBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.sub._interface.base.attributes.tags.TagBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.LinkId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NetworkTopology;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TopologyId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TpId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.link.attributes.DestinationBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.link.attributes.SourceBuilder;
@@ -75,8 +77,11 @@ import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Link;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.LinkBuilder;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.TopologyTypes;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.TopologyTypesBuilder;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPointKey;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
@@ -84,12 +89,28 @@ import org.slf4j.LoggerFactory;
 
 class VbdUtil {
 
+    public static final TopologyId STARTUP_CONFIG_TOPOLOGY = new TopologyId("vbridge-startup-config"); // see vbridge-topology.yang
+
     private static final Logger LOG = LoggerFactory.getLogger(VbdUtil.class);
     private static final String TUNNEL_ID_PREFIX = "vxlan_tunnel";
     private static final String BRIDGE_DOMAIN_IID_PREFIX = "v3po:vpp/bridge-domains/bridge-domain/";
 
     private VbdUtil() {
         throw new UnsupportedOperationException("Can't instantiate util class");
+    }
+
+    public static InstanceIdentifier<Topology> topologyIid(TopologyId topologyId) {
+        return InstanceIdentifier.builder(NetworkTopology.class)
+            .child(Topology.class, new TopologyKey(topologyId))
+            .build();
+    }
+
+    public static InstanceIdentifier<TerminationPoint> terminationPointIid(TopologyId topologyId, NodeId nodeId, TpId tpId) {
+        return InstanceIdentifier.builder(NetworkTopology.class)
+            .child(Topology.class, new TopologyKey(topologyId))
+            .child(Node.class, new NodeKey(new NodeId(nodeId)))
+            .child(TerminationPoint.class, new TerminationPointKey(tpId))
+            .build();
     }
 
     static DataBroker resolveDataBrokerForMountPoint(final InstanceIdentifier<Node> iiToMountPoint, final MountPointService mountService) {

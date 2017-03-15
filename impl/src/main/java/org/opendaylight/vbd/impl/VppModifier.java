@@ -8,7 +8,6 @@
 
 package org.opendaylight.vbd.impl;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -16,13 +15,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
+import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
@@ -54,23 +53,34 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.bridge.domains.BridgeDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214.vpp.bridge.domains.BridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeAugment;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeCfgAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TunnelType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.TunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point.InterfaceType;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.UserInterface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.VirtualDomainCarrier;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev160429.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.SubinterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.interfaces._interface.SubInterfaces;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.interfaces._interface.sub.interfaces.SubInterface;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev161214.interfaces._interface.sub.interfaces.SubInterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TpId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
+import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.node.TerminationPoint;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 
 /**
  *  Class which is used for manipulation with VPP
@@ -256,10 +266,10 @@ final class VppModifier {
      * @return future which contains list of ip addresses in the same order as was specified in {@code iiToVpps}
      */
     @SafeVarargs
-    final List<Optional<Ipv4AddressNoZone>> readIpAddressesFromVpps(final KeyedInstanceIdentifier<Node, NodeKey>... iiToVpps) throws ExecutionException, InterruptedException {
+    final List<Optional<Ipv4AddressNoZone>> readIpAddressesFromVpps(DataBroker dataBroker, final KeyedInstanceIdentifier<Node, NodeKey>... iiToVpps) throws ExecutionException, InterruptedException {
         final List<Optional<Ipv4AddressNoZone>> ipv4Futures = new ArrayList<>(iiToVpps.length);
         for (final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp : iiToVpps) {
-            ipv4Futures.add(readIpAddressFromVpp(iiToVpp).get());
+            ipv4Futures.add(readIpAddressFromVpp(dataBroker, iiToVpp).get());
         }
         return ipv4Futures;
     }
@@ -273,7 +283,9 @@ final class VppModifier {
      * @return if set ipv4 address is found at mounted vpp then it is returned as future. Otherwise absent value is returned
      * in future or exception which has been thrown
      */
-    private ListenableFuture<Optional<Ipv4AddressNoZone>> readIpAddressFromVpp(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+    private ListenableFuture<Optional<Ipv4AddressNoZone>> readIpAddressFromVpp(@Nonnull DataBroker localDataBroker,
+            final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        LOG.warn("DEBUG_ Processing Node: {}", iiToVpp.getPathArguments());
         final SettableFuture<Optional<Ipv4AddressNoZone>> resultFuture = SettableFuture.create();
 
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
@@ -282,18 +294,45 @@ final class VppModifier {
                     LogicalDatastoreType.OPERATIONAL, InstanceIdentifier.create(InterfacesState.class),
                     VbdNetconfTransaction.RETRY_COUNT);
             if (opInterfaceState.isPresent()) {
+                Ipv4AddressNoZone backupIp = null;
                 for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf : opInterfaceState.get().getInterface()) {
                     final Optional<Ipv4AddressNoZone> ipOp = readIpAddressFromInterface(intf, iiToVpp);
                     if (ipOp.isPresent() && !intf.getType().equals(Loopback.class)) {
-                        resultFuture.set(ipOp);
-                        break;
+                        LOG.trace("DEBUG_ Reading TP {} from node. {}", intf.getName(), iiToVpp.getKey().getNodeId());
+                        ReadOnlyTransaction rTx = localDataBroker.newReadOnlyTransaction();
+                        Optional<TerminationPoint> optp;
+                        InstanceIdentifier<TerminationPoint> iid =
+                                VbdUtil.terminationPointIid(VbdUtil.STARTUP_CONFIG_TOPOLOGY,
+                                        new NodeId(iiToVpp.getKey().getNodeId()), new TpId(intf.getName()));
+                        try {
+                            optp = rTx.read(LogicalDatastoreType.OPERATIONAL, iid).get();
+                            LOG.trace("DEBUG_ reading result present: {}, {}", optp.isPresent(), optp);
+                            if (optp.isPresent()
+                                    && optp.get().getAugmentation(TerminationPointVbridgeCfgAugment.class) != null
+                                    && optp.get()
+                                        .getAugmentation(TerminationPointVbridgeCfgAugment.class)
+                                        .getInterfaceType() instanceof VirtualDomainCarrier) {
+                                LOG.trace("DEBUG_ setting result future with: {}", optp.get());
+                                resultFuture.set(ipOp);
+                                break;
+                            }
+                        } catch (InterruptedException | ExecutionException e) {
+                            LOG.error("Failed to read interface {} from node {}. {}", iiToVpp, intf.getName(), e);
+                        }
+                        LOG.trace("DEBUG_ backup IP to return is: {}", ipOp.get());
+                        backupIp = ipOp.get();
                     }
+                }
+                if(backupIp != null) {
+                    LOG.trace("DEBUG_ Returning backup future: {}", backupIp);
+                    resultFuture.set(Optional.of(backupIp));
                 }
             } else {
                 LOG.debug("There appear to be no interfaces on node {}.", PPrint.node(iiToVpp));
             }
 
             // if we got here, we were unable to successfully read an ip address from any of the node's interfaces
+            LOG.warn("DEBUG_ No interface found for node: {}", iiToVpp.getKey());
             resultFuture.set(Optional.absent());
         } else {
             LOG.debug("Data broker for vpp {} is missing.", iiToVpp);

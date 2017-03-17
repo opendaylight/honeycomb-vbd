@@ -1,0 +1,50 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "fafc7978_fbf4cad0",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VirtualBridgeDomainManager.java",
+        "patchSetId": 9
+      },
+      "lineNbr": 61,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-17T09:07:03Z",
+      "side": 1,
+      "message": "remove spaces",
+      "range": {
+        "startLine": 61,
+        "startChar": 0,
+        "endLine": 61,
+        "endChar": 4
+      },
+      "revId": "e20afe137e437b3b2674c517a2e5076180d0028f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "fafc7978_1bf8aec3",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VirtualBridgeDomainManager.java",
+        "patchSetId": 9
+      },
+      "lineNbr": 78,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-03-17T09:07:03Z",
+      "side": 1,
+      "message": "can you move this to a variable",
+      "range": {
+        "startLine": 78,
+        "startChar": 37,
+        "endLine": 78,
+        "endChar": 40
+      },
+      "revId": "e20afe137e437b3b2674c517a2e5076180d0028f",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

@@ -33,7 +33,7 @@ module vbridge-status {
       }
    }
 
-   augment "/v3po:vpp-state/v3po:bridge-domains/v3po:bridge-domain" {
+   augment "/v3po:bridge-domains-state/v3po:bridge-domain" {
       ext:augment-identifier "bridge-domain-status-augmentation";
       uses bridge-domain-status-fields;
    }

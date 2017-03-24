@@ -29,7 +29,10 @@ module vxlan-tunnel {
     }
 
     import network-topology { prefix nt; revision-date 2013-10-21; }
-    import v3po { prefix "v3po"; }
+    import v3po {
+        prefix "v3po";
+        revision-date "2016-12-14";
+    }
     import yang-ext { prefix ext; revision-date "2013-07-09"; }
     import vbridge-topology { prefix vbd; }
 

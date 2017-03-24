@@ -5,12 +5,19 @@ module vbridge-status {
 
    import v3po {
       prefix v3po;
+      revision-date "2017-03-15";
    }
 
    import yang-ext {
       prefix ext;
       revision-date "2013-07-09";
    }
+
+   revision "2017-03-27" {
+        description
+        "Revision changes:
+         - Changing augmentation to support latest revision of v3po";
+      }
 
    revision "2016-10-05" {
      description
@@ -33,7 +40,7 @@ module vbridge-status {
       }
    }
 
-   augment "/v3po:vpp-state/v3po:bridge-domains/v3po:bridge-domain" {
+   augment "/v3po:bridge-domains-state/v3po:bridge-domain" {
       ext:augment-identifier "bridge-domain-status-augmentation";
       uses bridge-domain-status-fields;
    }

@@ -24,16 +24,26 @@ module vlan-tunnel {
         See the License for the specific language governing permissions and
         limitations under the License.";
 
+    revision "2017-03-27" {
+        description "Adding backward compatibility";
+    }
+
     revision "2016-04-29" {
         description "Initial cut";
     }
 
     import network-topology { prefix nt; revision-date 2013-10-21; }
-    import v3po { prefix "v3po"; }
+    import v3po {
+        prefix v3po;
+        revision-date "2017-03-15";
+    }
     import yang-ext { prefix ext; revision-date "2013-07-09"; }
     import vbridge-topology { prefix vbd; }
     import opendaylight-l2-types { prefix "l2-types"; }
-    import vpp-vlan { prefix "vpp-vlan"; }
+    import vpp-vlan {
+        prefix "vpp-vlan";
+        revision-date "2017-03-15";
+    }
 
     identity tunnel-type-vlan {
         description "VLAN provider network";
@@ -69,4 +79,3 @@ module vlan-tunnel {
 
     }
 }
-

@@ -74,7 +74,7 @@
       <dependency>
         <groupId>org.opendaylight.honeycomb.vbd</groupId>
         <artifactId>vbd-artifacts</artifactId>
-        <version>1.1.0-SNAPSHOT</version>
+        <version>${project.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -143,6 +143,14 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>vbd-impl</artifactId>
+    </dependency>
+
+    <dependency>
+      <!-- finalname="/etc/org.opendaylight.vbd.impl.startup.cfg" -->
+      <groupId>${project.groupId}</groupId>
+      <artifactId>vbd-impl</artifactId>
+      <type>cfg</type>
+      <classifier>config</classifier>
     </dependency>
 
     <dependency>

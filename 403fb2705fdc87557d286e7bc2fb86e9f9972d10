@@ -22,6 +22,30 @@
       "revId": "403fb2705fdc87557d286e7bc2fb86e9f9972d10",
       "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da01753e_16d879ee",
+        "filename": "api/src/main/java/org/opendaylight/yang/gen/v1/urn/ietf/params/xml/ns/yang/ietf/lisp/address/types/rev151105/SimpleAddressBuilder.java",
+        "patchSetId": 2
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 6491
+      },
+      "writtenOn": "2017-04-10T13:20:40Z",
+      "side": 1,
+      "message": "Done",
+      "parentUuid": "da01753e_47a08e90",
+      "range": {
+        "startLine": 16,
+        "startChar": 8,
+        "endLine": 16,
+        "endChar": 81
+      },
+      "revId": "403fb2705fdc87557d286e7bc2fb86e9f9972d10",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
     }
   ]
 }

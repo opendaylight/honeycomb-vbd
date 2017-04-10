@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da01753e_e7c70211",
+        "filename": "api/src/main/java/org/opendaylight/yang/gen/v1/urn/opendaylight/params/xml/ns/yang/v3po/rev170315/InterfaceNameOrIndexBuilder.java",
+        "patchSetId": 3
+      },
+      "lineNbr": 16,
+      "author": {
+        "id": 5139
+      },
+      "writtenOn": "2017-04-10T08:35:42Z",
+      "side": 1,
+      "message": "please implement it in the same way as it is in hc2vpp so we have the same behavior for this builder on our side.",
+      "range": {
+        "startLine": 16,
+        "startChar": 8,
+        "endLine": 16,
+        "endChar": 81
+      },
+      "revId": "ea4aa6c030f81b4ead0806423a10fa5f7386bbb3",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da01753e_81ad3834",
+        "filename": "features/vbd-features/src/main/features/features.xml",
+        "patchSetId": 3
+      },
+      "lineNbr": 27,
+      "author": {
+        "id": 2046
+      },
+      "writtenOn": "2017-04-11T17:01:18Z",
+      "side": 1,
+      "message": "Why not ${configfile.directory}?\netc/ usually contains files that do not need feature installation to appear.\n(There should be a document with stronger requirements.)",
+      "range": {
+        "startLine": 27,
+        "startChar": 27,
+        "endLine": 27,
+        "endChar": 31
+      },
+      "revId": "7679c097efb9fd4dad4d1b5d85e95e580b316026",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

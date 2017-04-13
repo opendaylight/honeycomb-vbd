@@ -23,6 +23,7 @@ import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
+import org.opendaylight.vbd.api.VppInfoUtil;
 import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.IpAddress;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.inet.types.rev130715.Ipv4AddressNoZone;
@@ -300,7 +301,8 @@ final class VppModifier {
             resultFuture.set(Optional.absent());
             return resultFuture;
         }
-        Ipv4AddressNoZone backupIp = null;
+        Ipv4AddressNoZone randomBackupIp = null;
+        Ipv4AddressNoZone physicallyQualifiedInterfaceIp = null;
         for (org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf : opInterfaceState
             .get().getInterface()) {
             final Optional<Ipv4AddressNoZone> ipOp = readIpAddressFromInterface(intf, iiToVpp);
@@ -308,7 +310,12 @@ final class VppModifier {
                 continue;
             }
             LOG.trace("Resolving IP: read TP {} from node. {}", intf.getName(), iiToVpp.getKey().getNodeId());
-            backupIp = ipOp.get();
+            randomBackupIp = ipOp.get();
+
+            if (qualifiesAsPhysicalInterface(intf)) {
+                physicallyQualifiedInterfaceIp = ipOp.get();
+            }
+
             ReadOnlyTransaction rTx = localDataBroker.newReadOnlyTransaction();
             Optional<TerminationPoint> optp;
             InstanceIdentifier<TerminationPoint> iid = VbdUtil.terminationPointIid(VbdUtil.STARTUP_CONFIG_TOPOLOGY,
@@ -331,11 +338,19 @@ final class VppModifier {
                 LOG.error("Failed to read interface {} from node {}. {}", iiToVpp, intf.getName(), e);
             }
         }
-        if (backupIp != null) {
+
+        if (physicallyQualifiedInterfaceIp != null) {
+            LOG.warn("Resolving IP: Returning IP address of physically qualified interface " +
+                            "for node as tunnel interface: {}", physicallyQualifiedInterfaceIp);
+            resultFuture.set(Optional.of(physicallyQualifiedInterfaceIp));
+            return resultFuture;
+        }
+
+        if (randomBackupIp != null) {
             // interface not found in startup config as domain-carrier
             LOG.warn("Resolving IP: Returning IP address of unlabeled interface for node as tunnel interface: {}",
-                    backupIp);
-            resultFuture.set(Optional.of(backupIp));
+                    randomBackupIp);
+            resultFuture.set(Optional.of(randomBackupIp));
             return resultFuture;
         }
         // if we got here, we were unable to successfully read an ip address from any of the
@@ -383,6 +398,21 @@ final class VppModifier {
 
         LOG.debug("Got ip address {} from interface {} on node {}", ip.getValue(), intf.getName(), PPrint.node(iiToVpp));
         return Optional.of(ip);
+    }
+
+    /**
+     * See if a vpp host Interface qualifies as physical interface
+     *
+     * @param intf Interface for which we will decide
+     * @return <code>true</code> if interface qualifies as physical interface
+     *         <code>false</code> otherwise
+     */
+    private boolean qualifiesAsPhysicalInterface(org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf) {
+        String interfaceName = intf.getName();
+        if(interfaceName == null) {
+            return false;
+        }
+        return interfaceName.contains(VppInfoUtil.PHYSICAL_INTERFACE_MARKER);
     }
 
     /**

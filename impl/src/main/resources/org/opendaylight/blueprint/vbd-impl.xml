@@ -8,7 +8,7 @@
     <reference id="bindingAwareBroker" interface="org.opendaylight.controller.sal.binding.api.BindingAwareBroker"/>
     <reference id="clusterSingletonService" interface="org.opendaylight.mdsal.singleton.common.api.ClusterSingletonServiceProvider"/>
 
-    <cm:property-placeholder persistent-id="org.opendaylight.vbd.startup" update-strategy="none">
+    <cm:property-placeholder persistent-id="org.opendaylight.vbd.impl.startup" update-strategy="none">
         <cm:default-properties>
             <cm:property name="virtual-domain-interface" value="unspecified"/>
         </cm:default-properties>

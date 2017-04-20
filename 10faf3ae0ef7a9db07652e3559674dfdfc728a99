@@ -33,6 +33,24 @@
       "revId": "10faf3ae0ef7a9db07652e3559674dfdfc728a99",
       "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
       "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da01753e_f462d2ab",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 418,
+      "author": {
+        "id": 3547
+      },
+      "writtenOn": "2017-04-20T11:36:56Z",
+      "side": 1,
+      "message": "That is a good point, but I would not get rid of that checking to avoid NPEs, would I?",
+      "parentUuid": "da01753e_19398fa4",
+      "revId": "10faf3ae0ef7a9db07652e3559674dfdfc728a99",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
     }
   ]
 }

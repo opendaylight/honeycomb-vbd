@@ -31,6 +31,7 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.Interface;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceBuilder;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.InterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface1;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.Interface2;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.Address;
@@ -87,6 +88,7 @@ import com.google.common.util.concurrent.SettableFuture;
 final class VppModifier {
     private static final Long DEFAULT_ENCAP_VRF_ID = 0L;
     private static final Short DEFAULT_SHG = 1;
+    private static final String TENANT_INTERFACE = "tenant-interface";
 
     private static final Logger LOG = LoggerFactory.getLogger(VppModifier.class);
     private final MountPointService mountService;
@@ -331,6 +333,22 @@ final class VppModifier {
                 LOG.error("Failed to read interface {} from node {}. {}", iiToVpp, intf.getName(), e);
             }
         }
+        /* In scenarios with Apex installers, interface role has to be learned from Honeycomb. Since we
+         * can't modify API in stable releases, the role of an interface (tenant-interface in this case)
+         * is specified in 'description' field.
+         */
+        final Optional<Interfaces> opInterfaces =
+                VbdNetconfTransaction.read(vppDataBroker, LogicalDatastoreType.CONFIGURATION,
+                        InstanceIdentifier.create(Interfaces.class), VbdNetconfTransaction.RETRY_COUNT);
+        for (Interface intf : opInterfaces.get().getInterface()) {
+            if (intf.getDescription().equals(TENANT_INTERFACE)) {
+                final Optional<Ipv4AddressNoZone> ipOp = readIpAddressFromInterface(intf, iiToVpp);
+                if (ipOp.isPresent() && !intf.getType().equals(Loopback.class)) {
+                    resultFuture.set(ipOp);
+                    return resultFuture;
+                }
+            }
+        }
         if (backupIp != null) {
             // interface not found in startup config as domain-carrier
             LOG.warn("Resolving IP: Returning IP address of unlabeled interface for node as tunnel interface: {}",
@@ -346,12 +364,14 @@ final class VppModifier {
     }
 
     /**
-     * Read the first available IPv4 address from the given interface.
+     * Read the first available IPv4 address from the given
+     * {@link org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface}.
      *
      * @param intf Interface to read an address from
      * @param iiToVpp Node which contains the given interface
-     * @return An optional which is set to the IPv4 address which was read from the interface. If no IPv4 address could
-     * be read from this interface, the optional will be absent.
+     * @return An optional which is set to the IPv4 address which was read from the interface. If no
+     *         IPv4 address could
+     *         be read from this interface, the optional will be absent.
      */
     private Optional<Ipv4AddressNoZone>
     readIpAddressFromInterface(final org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.interfaces.rev140508.interfaces.state.Interface intf,
@@ -382,6 +402,48 @@ final class VppModifier {
         }
 
         LOG.debug("Got ip address {} from interface {} on node {}", ip.getValue(), intf.getName(), PPrint.node(iiToVpp));
+        return Optional.of(ip);
+    }
+
+    /**
+     * Read the first available IPv4 address from the given {@link Interface}.
+     *
+     * @param intf Interface to read an address from
+     * @param iiToVpp Node which contains the given interface
+     * @return An optional which is set to the IPv4 address which was read from the interface. If no IPv4 address could
+     * be read from this interface, the optional will be absent.
+     */
+    private Optional<Ipv4AddressNoZone> readIpAddressFromInterface(final Interface intf,
+            final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
+        final Interface1 augIntf = intf.getAugmentation(Interface1.class);
+
+        if (augIntf == null) {
+            LOG.debug("Cannot get Interface1 augmentation for intf {}", intf);
+            return Optional.absent();
+        }
+
+        final org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.Ipv4 ipv4 =
+                augIntf.getIpv4();
+        if (ipv4 == null) {
+            LOG.debug("Ipv4 address for interface {} on node {} is null!", augIntf, PPrint.node(iiToVpp));
+            return Optional.absent();
+        }
+
+        final List<org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces._interface.ipv4.Address> addresses =
+                ipv4.getAddress();
+        if (addresses == null || addresses.isEmpty()) {
+            LOG.debug("Ipv4 addresses list is empty for interface {} on node {}", augIntf, PPrint.node(iiToVpp));
+            return Optional.absent();
+        }
+
+        final Ipv4AddressNoZone ip = addresses.iterator().next().getIp();
+        if (ip == null) {
+            LOG.debug("Ipv4AddressNoZone is null for node {}", PPrint.node(iiToVpp));
+            return Optional.absent();
+        }
+
+        LOG.debug("Got ip address {} from interface {} on node {}", ip.getValue(), intf.getName(),
+                PPrint.node(iiToVpp));
         return Optional.of(ip);
     }
 

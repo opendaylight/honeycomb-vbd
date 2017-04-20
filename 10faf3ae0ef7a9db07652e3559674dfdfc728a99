@@ -1,0 +1,38 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "da01753e_39cf33b2",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 344,
+      "author": {
+        "id": 6675
+      },
+      "writtenOn": "2017-04-20T09:42:58Z",
+      "side": 1,
+      "message": "null pointer",
+      "revId": "10faf3ae0ef7a9db07652e3559674dfdfc728a99",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    },
+    {
+      "key": {
+        "uuid": "da01753e_19398fa4",
+        "filename": "impl/src/main/java/org/opendaylight/vbd/impl/VppModifier.java",
+        "patchSetId": 1
+      },
+      "lineNbr": 418,
+      "author": {
+        "id": 6675
+      },
+      "writtenOn": "2017-04-20T09:42:58Z",
+      "side": 1,
+      "message": "if those debug logs are not strictly needed , it can be converted to Optional.map(...).map(...)... (but only with java.util.Optional, guava one doest allow internaly to pass null value to map function, util one just skip those map calls to prevent null pointer",
+      "revId": "10faf3ae0ef7a9db07652e3559674dfdfc728a99",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

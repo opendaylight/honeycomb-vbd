@@ -76,6 +76,12 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
             switch (mod.getModificationType()) {
                 case DELETE:
                     LOG.debug("Topology {} removed", PPrint.topology(topology));
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
                     processionState = stopDomain(topology);
                     break;
                 case WRITE:

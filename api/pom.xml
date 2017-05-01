@@ -67,4 +67,22 @@
       <version>2013.08.27.11.0-SNAPSHOT</version>
     </dependency>
   </dependencies>
+
+   <!--project build-->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <configuration>
+          <instructions>
+            <Export-Package>
+              org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.lisp.address.*;version=1.6.0,
+              {local-packages}
+            </Export-Package>
+          </instructions>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 </project>

@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "ba068154_d302a60a",
+        "filename": "api/pom.xml",
+        "patchSetId": 2
+      },
+      "lineNbr": 80,
+      "author": {
+        "id": 491
+      },
+      "writtenOn": "2017-05-01T17:05:50Z",
+      "side": 1,
+      "message": "This is a temporary solution, since this particular version number will not be automatically bumped when the releng script bumps versions in POM files, after a release. If we don\u0027t want to move this model to mdsal, I propose we create a separate bundle in VDB just for this, with the exact same version as lispflowmapping, i.e. 1.6.0-SNAPSHOT for now in master. This is allowed, there is no need to have all VBD artifacts at the exact same version. That way releng scripts can bump version when necessary.",
+      "revId": "72103a158d1acb317ebdec2cb2222d795ca0a3b2",
+      "serverId": "7fc14799-209e-464c-9743-7a06c2c21a81",
+      "unresolved": false
+    }
+  ]
+}

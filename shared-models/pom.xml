@@ -16,8 +16,8 @@
 
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <modelVersion>4.0.0</modelVersion>
-  <artifactId>vbd-api</artifactId>
-  <version>1.1.0-SNAPSHOT</version>
+  <artifactId>vbd-shared-models</artifactId>
+  <version>1.5.0-SNAPSHOT</version>
   <packaging>bundle</packaging>
   <!-- <name> formatting is used by autorelease to parse and notify projects on
        build failure. Please do not modify this unless you have a good reason. -->
@@ -36,40 +36,17 @@
   </dependencyManagement>
 
   <dependencies>
-    <!-- TODO remove v3po and ietf-ip models from api and use a dependency on v3po api -->
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>iana-if-type-2014-05-08</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>ietf-yang-types-20130715</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>ietf-interfaces</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>ietf-inet-types-2013-07-15</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>ietf-topology</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>yang-ext</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>vbd-shared-models</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
-    </dependency>
-    <dependency>
-      <groupId>org.opendaylight.mdsal.model</groupId>
-      <artifactId>opendaylight-l2-types</artifactId>
-      <version>2013.08.27.10-SNAPSHOT</version>
-    </dependency>
+      <dependency>
+          <groupId>org.opendaylight.mdsal.model</groupId>
+          <artifactId>ietf-inet-types-2013-07-15</artifactId>
+      </dependency>
+      <dependency>
+          <groupId>org.opendaylight.mdsal.model</groupId>
+          <artifactId>yang-ext</artifactId>
+      </dependency>
+      <dependency>
+          <groupId>org.opendaylight.mdsal.model</groupId>
+          <artifactId>ietf-interfaces</artifactId>
+      </dependency>
   </dependencies>
 </project>

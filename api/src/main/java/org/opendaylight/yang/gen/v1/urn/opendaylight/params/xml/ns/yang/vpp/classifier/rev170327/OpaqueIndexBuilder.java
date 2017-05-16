@@ -1,4 +1,4 @@
-package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.classifier.rev161214;
+package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.classifier.rev170327;
 
 
 /**
@@ -17,7 +17,9 @@ public class OpaqueIndexBuilder {
             final long value = Long.parseLong(defaultValue); // u32 value
             return new OpaqueIndex(value);
         } catch (NumberFormatException e) {
-            return new OpaqueIndex(VppNodeBuilder.getDefaultInstance(defaultValue));
+            return new OpaqueIndex(
+                org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.classifier.rev170327.VppNodeBuilder
+                    .getDefaultInstance(defaultValue));
         }
     }
 

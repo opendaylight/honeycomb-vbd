@@ -3,6 +3,17 @@ module vpp-classifier {
   namespace "urn:opendaylight:params:xml:ns:yang:vpp:classifier";
   prefix "vpp-classifier";
 
+  revision "2017-03-27" {
+    description
+      "This revision updates classify table ref to be compatible with LeafRefContext
+        (ODL tool for checking leafrefs in runtime)";
+  }
+
+  revision "2016-03-15" {
+    description
+      "This revision adds policer support";
+  }
+
   revision "2016-12-14" {
     description
       "This revision adds the following new features:
@@ -19,13 +30,19 @@ module vpp-classifier {
       "https://wiki.fd.io/view/VPP/Introduction_To_N-tuple_Classifiers";
   }
 
+  // TODO add revision (policer inclusion)
+
   import ietf-yang-types {
     prefix "yang";
   }
 
+  import policer {
+    prefix "policer";
+  }
+
   typedef classify-table-ref {
     type leafref {
-      path "/vpp-classifier:vpp-classifier/classify-table/name";
+      path "/vpp-classifier/classify-table/name";
     }
     description
       "This type is used by data models that need to reference
@@ -71,17 +88,35 @@ module vpp-classifier {
   grouping classify-session-attributes {
     description
       "Defines classify session attributes that are mapped to classify_add_del_session
-       and classify_session_details messages parameters.";
+       and classify_session_details messages parameters.
+       Either hit_next or policer_hit_next should be defined.";
 
-    leaf hit_next {
-      type vpp-node;
+    choice next_node {
       mandatory true;
       description
-        "Vpp node to which packet will be send when it produces a match.";
+        "Options for expressing the next node on classify hit and associated metadata to be passed";
+      case standard {
+        leaf hit_next {
+          mandatory true;
+          type vpp-node;
+          description
+            "Vpp node to which packet will be send when it produces a match.";
+        }
+        leaf opaque_index {
+          type opaque-index;
+        }
+      }
+      case policer {
+        leaf policer_hit_next {
+          mandatory true;
+          type policer:policer-ref;
+        }
+        leaf color_classfier {
+          type policer:color-classfier;
+        }
+      }
     }
-    leaf opaque_index {
-      type opaque-index;
-    }
+
     leaf advance {
       type int32;
       default 0;

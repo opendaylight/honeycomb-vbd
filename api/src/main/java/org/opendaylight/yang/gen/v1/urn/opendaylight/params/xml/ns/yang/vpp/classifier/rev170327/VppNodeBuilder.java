@@ -1,4 +1,4 @@
-package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.classifier.rev161214;
+package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.classifier.rev170327;
 
 
 /**
@@ -18,7 +18,7 @@ public class VppNodeBuilder {
         } else if (PacketHandlingAction.Permit.toString().equalsIgnoreCase(defaultValue)) {
             return new VppNode(PacketHandlingAction.Permit);
         } else {
-            throw new IllegalArgumentException(String.format("Could not parse VppNode: %s", defaultValue));
+            return new VppNode(new VppNodeName(defaultValue));
         }
     }
 

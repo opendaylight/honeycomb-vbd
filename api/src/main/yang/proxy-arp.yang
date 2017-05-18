@@ -43,5 +43,4 @@ module proxy-arp {
   }
 
   // TODO(HC2VPP-86): add interfaces-state augmentation once VPP supports ARP proxy read (VPP-225)
-  // TODO(HC2VPP-7): move to interfaces/ip plugin
 }

@@ -42,7 +42,7 @@ module vlan-tunnel {
     import opendaylight-l2-types { prefix "l2-types"; }
     import vpp-vlan {
         prefix "vpp-vlan";
-        revision-date "2017-03-15";
+        revision-date "2017-05-09";
     }
 
     identity tunnel-type-vlan {

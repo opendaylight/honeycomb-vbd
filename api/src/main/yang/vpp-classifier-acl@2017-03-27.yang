@@ -1,0 +1,68 @@
+module vpp-classifier-acl {
+  yang-version 1;
+  namespace "urn:opendaylight:params:xml:ns:yang:vpp:classifier:acl";
+  prefix "vpp-classifier-acl";
+
+  revision "2017-05-03" {
+    description
+      "Removed support for ietf based acls.";
+  }
+
+  revision "2017-03-15" {
+    description
+      "Initial revision of vpp-classifier-acl model.";
+  }
+
+  import vpp-classifier {
+    prefix "vpp-classifier";
+  }
+
+  import yang-ext {
+    prefix "ext";
+  }
+
+  typedef interface-mode {
+    type enumeration {
+      enum "l2";
+      enum "l3";
+    }
+  }
+
+  grouping acl-base-attributes {
+    description
+      "Defines references to classify tables.
+       At least one table reference should be specified.";
+    container l2-acl {
+      leaf classify-table {
+        type vpp-classifier:classify-table-ref;
+        description
+          "An L2 ACL table";
+      }
+    }
+    container ip4-acl {
+      leaf classify-table {
+        type vpp-classifier:classify-table-ref;
+        description
+          "An IPv4 ACL table";
+      }
+    }
+    container ip6-acl {
+      leaf classify-table {
+        type vpp-classifier:classify-table-ref;
+        description
+          "An IPv6 ACL table";
+      }
+    }
+  }
+
+  grouping vpp-acl-attributes {
+      container acl {
+        container ingress {
+          uses vpp-classifier-acl:acl-base-attributes;
+        }
+        container egress {
+          uses vpp-classifier-acl:acl-base-attributes;
+        }
+      }
+  }
+}

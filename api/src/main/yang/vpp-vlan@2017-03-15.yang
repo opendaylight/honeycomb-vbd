@@ -38,6 +38,7 @@ module vpp-vlan {
   }
   import v3po {
     prefix v3po;
+    revision-date 2016-12-14;
   }
 
   typedef sub-interface-status {

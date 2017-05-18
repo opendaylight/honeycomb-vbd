@@ -62,10 +62,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.network.topology.topology.node.termination.point._interface.type.cfg.VirtualDomainCarrierCase;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev170327.TunnelTypeVxlan;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.tunnel.vxlan.rev170327.network.topology.topology.tunnel.parameters.VxlanTunnelParameters;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.SubinterfaceAugmentation;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.interfaces._interface.SubInterfaces;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.interfaces._interface.sub.interfaces.SubInterface;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.interfaces._interface.sub.interfaces.SubInterfaceKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.SubinterfaceAugmentation;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.interfaces._interface.SubInterfaces;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.interfaces._interface.sub.interfaces.SubInterface;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.interfaces._interface.sub.interfaces.SubInterfaceKey;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.NodeId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.TpId;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
@@ -751,7 +751,7 @@ final class VppModifier {
                 if (subInterfaceAugmentation != null) {
                     final SubInterfaces subInterfaces = subInterfaceAugmentation.getSubInterfaces();
                     for (SubInterface subInterface : subInterfaces.getSubInterface()) {
-                        final org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.sub._interface.base.attributes.L2 l2 = subInterface.getL2();
+                        final org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.sub._interface.base.attributes.L2 l2 = subInterface.getL2();
                         if (l2 != null && l2.getInterconnection() != null) {
                             final Interconnection interconnection = l2.getInterconnection();
                             if (interconnection instanceof BridgeBased) {
@@ -759,10 +759,10 @@ final class VppModifier {
                                 if (bridgeDomainName.equals(bridgeBased.getBridgeDomain())) {
                                     LOG.trace("Sub-interface {} has assigned bd which will be removed. Disconnecting ...",
                                             bdInterface.getName());
-                                    final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.sub._interface.base.attributes.L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
+                                    final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.sub._interface.base.attributes.L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
                                             .child(Interface.class, bdInterface.getKey()).augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class)
                                             .child(SubInterface.class, new SubInterfaceKey(subInterface.getKey()))
-                                            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.sub._interface.base.attributes.L2.class).builder().build();
+                                            .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170509.sub._interface.base.attributes.L2.class).builder().build();
                                     VbdNetconfTransaction.netconfSyncedDelete(vppDataBroker, augmentationIid,
                                         VbdNetconfTransaction.RETRY_COUNT);
                                     LOG.trace("Bridge domain {} removed from sub-interface {}", bridgeDomainName, bdInterface.getName());

@@ -1,12 +1,7 @@
 module vpp-routing-ra {
 
-    namespace "urn:ietf:params:xml:ns:yang:vpp-routing";
-    prefix "vpp-routing";
-    description "General extensions for routing advertisments message configuration provided by VPP APIs";
-
-    revision 2017-03-15 {
-        description "Initial revision.";
-    }
+    namespace "urn:ietf:params:xml:ns:yang:vpp-routing-ra";
+    prefix "vpp-routing-ra";
 
     import yang-ext {
         prefix "ext";
@@ -18,6 +13,17 @@ module vpp-routing-ra {
 
     import hc2vpp-ietf-ipv6-unicast-routing {
         prefix "v6ur";
+        revision-date 2014-05-25;
+    }
+
+    description "General extensions for routing advertisments message configuration provided by VPP APIs";
+
+    revision 2017-05-02 {
+        description "Changed namespace";
+    }
+
+    revision 2017-03-15 {
+        description "Initial revision.";
     }
 
     grouping ipv6-router-advertisements-vpp-attributes {

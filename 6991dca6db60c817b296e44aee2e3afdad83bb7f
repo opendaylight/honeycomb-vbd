@@ -1,0 +1,8 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: Tomas Cechvala <tcechval@cisco.com>
+Code-Review+2: Michal Cmarada <mcmarada@cisco.com>
+Submitted-by: Michal Cmarada <mcmarada@cisco.com>
+Submitted-at: Fri, 19 May 2017 06:58:32 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/56935
+Project: honeycomb/vbd
+Branch: refs/heads/master

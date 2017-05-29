@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
+import javax.swing.event.ListSelectionEvent;
 
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
@@ -85,6 +86,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
@@ -130,8 +132,10 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         this.tunnelIdAllocator = tunnelIdAllocator;
         this.iiBridgeDomainOnVPPRest = VbdUtil.provideIidBridgeDomainOnVPPRest(bridgeDomainName);
 
-        wipeOperationalState(topology);
-        createFreshOperationalState(topology);
+        List<ListenableFuture<Void>> list = new ArrayList<>();
+        list.add(wipeOperationalState(topology));
+        list.add(createFreshOperationalState(topology));
+        Futures.allAsList(list).get();
         readParams(topology);
 
         reg = dataBroker.registerDataTreeChangeListener(
@@ -370,12 +374,12 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         return tx.submit();
     }
 
-    private void createFreshOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
+    private ListenableFuture<Void> createFreshOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
         LOG.info("Creating fresh operational state for {}", PPrint.topology(topology));
 
         final WriteTransaction tx = chain.newWriteOnlyTransaction();
         tx.put(LogicalDatastoreType.OPERATIONAL, topology, VbdUtil.buildFreshTopology(topology), true);
-        tx.submit();
+        return tx.submit();
     }
 
     private void readParams(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {

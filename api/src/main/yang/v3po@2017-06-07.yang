@@ -3,6 +3,14 @@ module v3po {
   namespace "urn:opendaylight:params:xml:ns:yang:v3po";
   prefix "v3po";
 
+  revision "2017-03-15" {
+    description
+      "Revision changes:
+       - acl and ietf-acl moved to vpp-interface-acl
+       - vpp-state and rpc moved to vpp-management
+       - bridge domains moved to standalone container";
+  }
+
   revision "2016-12-14" {
     description
       "This revision adds the following new features:
@@ -13,6 +21,11 @@ module v3po {
        - added support for Loopback interfaces
        - added support for port mirroring";
   }
+
+  revision "2017-06-07" {
+    description "Eliminated config leafrefs in operational tree";
+  }
+
 
   revision "2015-01-05" {
     description "Initial revision of v3po model";
@@ -36,13 +49,10 @@ module v3po {
   import yang-ext {
     prefix "ext";
   }
-  import vpp-classfier-acl {
-    prefix "vpp-classfier-acl";
-  }
 
   typedef bridge-domain-ref {
     type leafref {
-      path "/vpp/bridge-domains/bridge-domain/name";
+      path "/bridge-domains/bridge-domain/name";
     }
     description
       "This type is used by to reference a bridge domain table";
@@ -460,7 +470,7 @@ module v3po {
     }
   }
 
-  grouping l2-base-attributes {
+  grouping l2-config-attributes {
       description
       "Parameters for configuring Layer2 features on interfaces.";
 
@@ -469,41 +479,65 @@ module v3po {
           leaf xconnect-outgoing-interface {
             /* Don't allow selection of this interface */
             must "../../if:name != current()";
-            type if:interface-ref; // todo use interface-state-ref for operational data?
+            type if:interface-ref;
             description
               "L2 xconnect mode";
           }
         }
         case bridge-based {
-          leaf bridge-domain {
-            type bridge-domain-ref;
-            mandatory true;
-            description
-              "Interfaces in a bridge-domain forward packets to other
-               interfaces in the same bridge-domain based on
-               destination mac address.";
-          }
-          leaf split-horizon-group {
-            when "../bridge-domain";
-            type uint8 {
-              range "0..255";
-            }
-            default 0; //no split horizon group
-            description
-              "Interface's split-horizon group. Interfaces in the same
-               bridge-domain and split-horizon group can not forward
-               packets between each other. ";
-          }
-          leaf bridged-virtual-interface {
-            when "../bridge-domain";
-            type boolean;
-            default false;
-            description
-              "Interface forward packets in the bridge-domain
-               associated with the BVI.";
-          }
+          uses bridge-based-attributes;
         }
       }
+  }
+
+  grouping l2-state-attributes {
+    description
+    "Parameters for configuring Layer2 features on interfaces.";
+
+    choice interconnection {
+      case xconnect-based {
+        leaf xconnect-outgoing-interface {
+          /* Don't allow selection of this interface */
+          must "../../if:name != current()";
+          type if:interface-state-ref;
+          description
+            "L2 xconnect mode";
+        }
+      }
+      case bridge-based {
+        uses bridge-based-attributes;
+      }
+    }
+  }
+
+  grouping bridge-based-attributes {
+    leaf bridge-domain {
+      type bridge-domain-ref;
+      mandatory true;
+      description
+        "Interfaces in a bridge-domain forward packets to other
+         interfaces in the same bridge-domain based on
+         destination mac address.";
+    }
+    leaf split-horizon-group {
+      when "../bridge-domain";
+      type uint8 {
+        range "0..255";
+      }
+      default 0; //no split horizon group
+      description
+        "Interface's split-horizon group. Interfaces in the same
+         bridge-domain and split-horizon group can not forward
+         packets between each other. ";
+    }
+    leaf bridged-virtual-interface {
+      when "../bridge-domain";
+      type boolean;
+      default false;
+      description
+        "Interface forward packets in the bridge-domain
+         associated with the BVI.";
+    }
   }
 
   grouping span-attributes {
@@ -513,7 +547,7 @@ module v3po {
       list mirrored-interface {
         key "iface-ref";
         leaf iface-ref {
-          type if:interface-ref; // todo use interface-state-ref for operational data?
+          type if:interface-ref;
         }
 
         leaf state {
@@ -523,6 +557,24 @@ module v3po {
       }
     }
   }
+
+  grouping span-state-attributes {
+      description "Parameters of the SPAN feature";
+
+      container mirrored-interfaces {
+        list mirrored-interface {
+          key "iface-ref";
+          leaf iface-ref {
+            type if:interface-state-ref;
+          }
+
+          leaf state {
+            type span-state;
+            mandatory true;
+          }
+        }
+      }
+    }
 
   augment /if:interfaces/if:interface {
     ext:augment-identifier "vpp-interface-augmentation";
@@ -574,7 +626,7 @@ module v3po {
            "(not (../if:ipv4[if:enabled = 'true']/if:address/if:ip) and " +
            "not (../if:ipv6[if:enabled = 'true']/if:address/if:ip))";
 
-      uses l2-base-attributes;
+      uses l2-config-attributes;
     }
 
     container vxlan-gpe {
@@ -583,47 +635,25 @@ module v3po {
       uses vxlan-gpe-base-attributes;
     }
 
-    container acl {
-      container ingress {
-        uses vpp-classfier-acl:acl-base-attributes;
-      }
-      container egress {
-        uses vpp-classfier-acl:acl-base-attributes;
-      }
-    }
-
-    container ietf-acl {
-      container ingress {
-        uses vpp-classfier-acl:ietf-acl-base-attributes;
-      }
-      container egress {
-        uses vpp-classfier-acl:ietf-acl-base-attributes;
-      }
-    }
-
     container span {
       uses span-attributes;
     }
   }
 
-  container vpp {
-    description
-    "VPP config data";
+  container bridge-domains {
+    presence "Bridge domains configuration";
+    list bridge-domain {
+      key "name";
 
-    container bridge-domains {
-      list bridge-domain {
-        key "name";
-
-        leaf name {
-          type string;
-        }
-
-        uses bridge-domain-attributes;
-        uses l2-fib-attributes;
-
-        description
-          "bridge-domain configuration";
+      leaf name {
+        type string;
       }
+
+      uses bridge-domain-attributes;
+      uses l2-fib-attributes;
+
+      description
+        "bridge-domain configuration";
     }
   }
 
@@ -675,29 +705,11 @@ module v3po {
            "(not (../if:ipv4[if:enabled = 'true']/if:address/if:ip) and " +
            "not (../if:ipv6[if:enabled = 'true']/if:address/if:ip))";
 
-      uses l2-base-attributes;
-    }
-
-    container acl {
-      container ingress {
-        uses vpp-classfier-acl:acl-base-attributes;
-      }
-      container egress {
-        uses vpp-classfier-acl:acl-base-attributes;
-      }
-    }
-
-    container ietf-acl {
-      container ingress {
-        uses vpp-classfier-acl:ietf-acl-base-attributes;
-      }
-      container egress {
-        uses vpp-classfier-acl:ietf-acl-base-attributes;
-      }
+      uses l2-state-attributes;
     }
 
     container span {
-      uses span-attributes;
+      uses span-state-attributes;
     }
   }
 
@@ -714,14 +726,9 @@ module v3po {
     }
   }
 
-  container vpp-state {
-    config false;
-
-    description
-      "VPP operational data";
-
-    container bridge-domains {
+  container bridge-domains-state {
       // FIXME: Should this live in bridge-domain.yang in a modular fashion ?
+      config "false";
       list bridge-domain {
 
         key "name";
@@ -735,29 +742,6 @@ module v3po {
         description
           "bridge-domain operational data";
       }
-    }
-
-    container version {
-      leaf name {
-        type string;
-      }
-      leaf build-directory {
-        type string;
-      }
-      leaf build-date {
-        type string;
-      }
-      leaf branch {
-        type string;
-      }
-      leaf pid {
-        type uint32;
-        description
-          "PID of the vpp process";
-      }
-      description
-      "vlib version info";
-    }
   }
 
   // VPP Notifications
@@ -797,19 +781,6 @@ module v3po {
   notification interface-deleted {
     leaf name {
         type interface-name-or-index;
-    }
-  }
-
-  rpc cli-inband {
-    input {
-      leaf cmd {
-        type string;
-      }
-    }
-    output {
-      leaf reply {
-        type string;
-      }
     }
   }
 }

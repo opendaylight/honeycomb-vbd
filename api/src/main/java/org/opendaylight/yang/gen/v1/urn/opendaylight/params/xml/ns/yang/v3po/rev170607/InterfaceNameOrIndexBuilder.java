@@ -1,4 +1,4 @@
-package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev161214;
+package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170607;
 
 /**
  * The purpose of generated class in src/main/java for Union types is to create new instances of unions from a string representation.
@@ -12,7 +12,7 @@ package org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.re
 public class InterfaceNameOrIndexBuilder {
 
     public static InterfaceNameOrIndex getDefaultInstance(java.lang.String defaultValue) {
-        throw new java.lang.UnsupportedOperationException("Not yet implemented");
+        return new InterfaceNameOrIndex(defaultValue);
     }
 
 }

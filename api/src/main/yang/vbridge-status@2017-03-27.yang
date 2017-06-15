@@ -5,7 +5,7 @@ module vbridge-status {
 
    import v3po {
       prefix v3po;
-      revision-date "2017-03-15";
+      revision-date "2017-06-07";
    }
 
    import yang-ext {

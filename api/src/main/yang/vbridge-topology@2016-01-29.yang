@@ -27,7 +27,7 @@ module vbridge-topology {
 
     import network-topology { prefix nt; revision-date 2013-10-21; }
     import odl-external-reference { prefix extref; }
-    import v3po { prefix "v3po"; }
+    import v3po { prefix "v3po"; revision-date "2017-06-07"; }
     import yang-ext { prefix ext; revision-date "2013-07-09"; }
 
     identity tunnel-type {

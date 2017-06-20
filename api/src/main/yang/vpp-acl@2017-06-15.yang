@@ -3,6 +3,11 @@ module vpp-acl {
   namespace "urn:opendaylight:params:xml:ns:yang:vpp:acl";
   prefix "vpp-acl";
 
+  revision "2017-06-15" {
+    description
+      "Renamed stateful/permit leaf to permit-and-reflect";
+  }
+
   revision "2016-12-14" {
     description
       "Initial revision of vpp-acl model.";
@@ -32,7 +37,7 @@ module vpp-acl {
     ext:augment-identifier "stateful-acl-action-augmentation";
     when "../acl:matches/acl:ace-type = 'vpp-acl:vpp-acl'";
     case stateful {
-      leaf permit {
+      leaf permit-and-reflect {
         type empty;
         description
           "Permits egress TCP/UDP traffic and ingress in reverse direction by creating reflexive ACEs.";

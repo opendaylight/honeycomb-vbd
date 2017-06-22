@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.odlparent</groupId>
     <artifactId>features-parent</artifactId>
-    <version>1.7.4-SNAPSHOT</version>
+    <version>1.7.5-SNAPSHOT</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-features</artifactId>
-  <version>1.0.4-SNAPSHOT</version>
+  <version>1.0.5-SNAPSHOT</version>
   <name>${project.artifactId}</name>
   <modelVersion>4.0.0</modelVersion>
 
@@ -24,12 +24,12 @@
     <maven>3.1.1</maven>
   </prerequisites>
   <properties>
-    <mdsal.version>2.1.4-SNAPSHOT</mdsal.version>
-    <mdsal.model.version>0.9.4-SNAPSHOT</mdsal.model.version>
-    <restconf.version>1.4.4-SNAPSHOT</restconf.version>
-    <netconf.version>1.1.4-SNAPSHOT</netconf.version>
-    <yangtools.version>1.0.4-SNAPSHOT</yangtools.version>
-    <dlux.version>0.4.4-SNAPSHOT</dlux.version>
+    <mdsal.version>2.1.5-SNAPSHOT</mdsal.version>
+    <mdsal.model.version>0.9.5-SNAPSHOT</mdsal.model.version>
+    <restconf.version>1.4.5-SNAPSHOT</restconf.version>
+    <netconf.version>1.1.5-SNAPSHOT</netconf.version>
+    <yangtools.version>1.0.5-SNAPSHOT</yangtools.version>
+    <dlux.version>0.4.5-SNAPSHOT</dlux.version>
     <configfile.directory>etc/opendaylight/karaf</configfile.directory>
   </properties>
   <dependencyManagement>
@@ -38,21 +38,21 @@
       <dependency>
         <groupId>org.opendaylight.mdsal</groupId>
         <artifactId>mdsal-artifacts</artifactId>
-        <version>2.1.4-SNAPSHOT</version>
+        <version>2.1.5-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.mdsal.model</groupId>
         <artifactId>mdsal-model-artifacts</artifactId>
-        <version>0.9.4-SNAPSHOT</version>
+        <version>0.9.5-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.yangtools</groupId>
         <artifactId>yangtools-artifacts</artifactId>
-        <version>1.0.4-SNAPSHOT</version>
+        <version>1.0.5-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -66,14 +66,14 @@
       <dependency>
         <groupId>org.opendaylight.netconf</groupId>
         <artifactId>restconf-artifacts</artifactId>
-        <version>1.4.4-SNAPSHOT</version>
+        <version>1.4.5-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.honeycomb.vbd</groupId>
         <artifactId>vbd-artifacts</artifactId>
-        <version>1.0.4-SNAPSHOT</version>
+        <version>1.0.5-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>

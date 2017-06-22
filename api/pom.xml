@@ -10,14 +10,14 @@
   <parent>
     <groupId>org.opendaylight.mdsal</groupId>
     <artifactId>binding-parent</artifactId>
-    <version>0.9.4-SNAPSHOT</version>
+    <version>0.9.5-SNAPSHOT</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>vbd-api</artifactId>
-  <version>1.0.4-SNAPSHOT</version>
+  <version>1.0.5-SNAPSHOT</version>
   <packaging>bundle</packaging>
 
   <dependencyManagement>
@@ -25,7 +25,7 @@
       <dependency>
         <groupId>org.opendaylight.mdsal.model</groupId>
         <artifactId>mdsal-model-artifacts</artifactId>
-        <version>0.9.4-SNAPSHOT</version>
+        <version>0.9.5-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -61,7 +61,7 @@
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
       <artifactId>opendaylight-l2-types</artifactId>
-      <version>2013.08.27.9.4-SNAPSHOT</version>
+      <version>2013.08.27.9.5-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>

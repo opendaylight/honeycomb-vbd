@@ -26,7 +26,6 @@
   <name>ODL :: vbd :: ${project.artifactId}</name>
 
   <properties>
-    <config.file>src/main/config/vbd.xml</config.file>
     <netconf.version>1.3.0-SNAPSHOT</netconf.version>
   </properties>
 
@@ -84,29 +83,6 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>attach-artifacts</id>
-                        <goals>
-                            <goal>attach-artifact</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <artifacts>
-                                <artifact>
-                                    <file>${project.build.directory}/classes/config/vbd.xml</file>
-                                    <type>xml</type>
-                                    <classifier>config</classifier>
-                                </artifact>
-                            </artifacts>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
@@ -137,11 +113,6 @@
                                     <type>cfg</type>
                                     <classifier>config</classifier>
                                 </artifact>
-                                <artifacts>
-                                    <file>${project.build.directory}/classes/config/vbd.xml</file>
-                                    <type>xml</type>
-                                    <classifier>config</classifier>
-                                </artifacts>
                             </artifacts>
                         </configuration>
                     </execution>

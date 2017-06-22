@@ -425,8 +425,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
 
         // read the topology to find the links
         final ReadOnlyTransaction rTx = dataBroker.newReadOnlyTransaction();
-        return Futures.transform(rTx.read(LogicalDatastoreType.OPERATIONAL, topology), (AsyncFunction<Optional<Topology>,
-                List<InstanceIdentifier<Link>>>) result -> {
+        return Futures.transformAsync(rTx.read(LogicalDatastoreType.OPERATIONAL, topology), result-> {
             final List<InstanceIdentifier<Link>> prunableLinks = new ArrayList<>();
 
             if (result.isPresent()) {
@@ -705,7 +704,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
 
     private ListenableFuture<Void> addSupportingBridgeDomain(final ListenableFuture<Void> addVppToBridgeDomainFuture,
                                                              final Node node) {
-        return Futures.transform(addVppToBridgeDomainFuture, (AsyncFunction<Void, Void>) input -> {
+        return Futures.transformAsync(addVppToBridgeDomainFuture, input -> {
             LOG.debug("Storing bridge member to operational DS....");
             final BridgeMemberBuilder bridgeMemberBuilder = new BridgeMemberBuilder();
             bridgeMemberBuilder.setSupportingBridgeDomain(new ExternalReference(iiBridgeDomainOnVPPRest));

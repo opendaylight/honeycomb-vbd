@@ -13,7 +13,7 @@
     <parent>
         <groupId>org.opendaylight.odlparent</groupId>
         <artifactId>odlparent-lite</artifactId>
-        <version>1.9.0</version>
+        <version>2.0.0</version>
         <relativePath/>
     </parent>
 
@@ -27,7 +27,6 @@
 
     <modules>
         <module>vbd-features</module>
-        <module>vbd-features4</module>
         <module>odl-vbd</module>
         <module>odl-vbd-rest</module>
         <module>odl-vbd-ui</module>

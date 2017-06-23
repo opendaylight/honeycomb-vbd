@@ -22,6 +22,7 @@
     <artifactId>vbd-features</artifactId>
     <version>1.3.0-SNAPSHOT</version>
     <packaging>feature</packaging>
+    <name>ODL :: vbd :: ${project.artifactId}</name>
 
     <dependencies>
         <dependency>

@@ -36,13 +36,6 @@
         <version>${project.version}</version>
       </dependency>
       <dependency>
-          <groupId>${project.groupId}</groupId>
-          <artifactId>vbd-impl</artifactId>
-          <type>xml</type>
-          <classifier>config</classifier>
-          <version>${project.version}</version>
-      </dependency>
-      <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-impl</artifactId>
         <version>${project.version}</version>

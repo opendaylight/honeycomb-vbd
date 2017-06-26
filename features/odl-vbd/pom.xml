@@ -45,13 +45,5 @@
             <artifactId>vbd-impl</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <dependency>
-            <!-- finalname="${configfile.directory}/vbd.xml" -->
-            <groupId>${project.groupId}</groupId>
-            <artifactId>vbd-impl</artifactId>
-            <version>${project.version}</version>
-            <type>xml</type>
-            <classifier>config</classifier>
-        </dependency>
     </dependencies>
 </project>

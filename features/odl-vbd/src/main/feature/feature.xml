@@ -8,8 +8,5 @@
 -->
 <features name="odl-vbd-${project.version}" xmlns="http://karaf.apache.org/xmlns/features/v1.2.0">
     <feature name="odl-vbd" version="${project.version}">
-        <configfile finalname="${configfile.directory}/vbd.xml">
-            mvn:org.opendaylight.honeycomb.vbd/vbd-impl/${project.version}/xml/config
-        </configfile>
     </feature>
 </features>

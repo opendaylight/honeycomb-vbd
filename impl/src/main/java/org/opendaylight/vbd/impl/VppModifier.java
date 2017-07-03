@@ -37,10 +37,14 @@ import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev14061
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.Ipv4;
 import org.opendaylight.yang.gen.v1.urn.ietf.params.xml.ns.yang.ietf.ip.rev140616.interfaces.state._interface.ipv4.Address;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.BridgeDomains;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VppInterfaceAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VxlanTunnel;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VxlanVni;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.BridgeDomain;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.BridgeDomainBuilder;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.BridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.L2Builder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.interfaces._interface.Vxlan;
@@ -48,10 +52,6 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.Interconnection;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBased;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.BridgeDomains;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.BridgeDomain;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.BridgeDomainBuilder;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.BridgeDomainKey;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TerminationPointVbridgeCfgAugment;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.topology.rev160129.TopologyVbridgeAugment;
@@ -118,8 +118,8 @@ final class VppModifier {
             return Futures.immediateFuture(null);
         }
         // Remove bridge domain from interfaces
-        findInterfacesWithAssignedBridgeDomain(vppDataBroker);
-        final boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(vppDataBroker, this.iiBridgeDomainOnVPP,
+        findInterfacesWithAssignedBridgeDomain(iiToVpp);
+        final boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(iiToVpp, this.iiBridgeDomainOnVPP,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully deleted bridge domain {} from node {}", bridgeDomainName, PPrint.node(iiToVpp));
@@ -145,7 +145,7 @@ final class VppModifier {
         }
 
         for (final Interface intf : supportingInterfaces) {
-            deleteInterface(iiToVpp, intf, vppDataBroker);
+            deleteInterface(iiToVpp, intf);
         }
 
         final Optional<IpAddress> ipOp = getVtepAddress(iiToVpp, supportingInterfaces);
@@ -157,11 +157,11 @@ final class VppModifier {
         }
     }
 
-    private void deleteInterface(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final Interface intf, final DataBroker vppDataBroker) {
+    private void deleteInterface(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final Interface intf) {
         LOG.debug("Deleting interface {} from config DS on vpp {}, it was supporting bridge domain {}", intf.getName(), PPrint.node(iiToVpp), bridgeDomainName);
 
         final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToIntf = InstanceIdentifier.create(Interfaces.class).child(Interface.class, intf.getKey());
-        final boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(vppDataBroker, iiToIntf,
+        final boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(iiToVpp, iiToIntf,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully deleted interface {}, which was supporting bridge domain {} on node {}",
@@ -220,7 +220,7 @@ final class VppModifier {
 
             getInterfacesFromVpp(peerDataBroker).stream()
                     .filter(peerIntf -> doesInterfacePointTowardAddress(peerIntf, deletedNodeAddress))
-                    .forEach(peerIntf -> deleteInterface(peerIID, peerIntf, peerDataBroker));
+                    .forEach(peerIntf -> deleteInterface(peerIID, peerIntf));
         }
     }
 
@@ -479,7 +479,7 @@ final class VppModifier {
             final String vxlanId = VbdUtil.provideVxlanId(potentialExistingInterfaceTunnelId);
             final InstanceIdentifier<L2> l2Iid = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                     new InterfaceKey(vxlanId)).augmentation(VppInterfaceAugmentation.class).child(L2.class).builder().build();
-            boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(vppDataBroker, l2Iid, l2Data,
+            boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(iidToVpp, l2Iid, l2Data,
                     VbdNetconfTransaction.RETRY_COUNT);
             if (transactionState) {
                 LOG.debug("Writing bridge domain into super virtual interface to {} finished successfully.",
@@ -498,7 +498,7 @@ final class VppModifier {
                     = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                     new InterfaceKey(VbdUtil.provideVxlanId(vxlanTunnelId)));
             LOG.debug("Submitting new interface to config store...");
-            boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(vppDataBroker, iidToInterface, interfaceData,
+            boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(iidToVpp, iidToInterface, interfaceData,
                     VbdNetconfTransaction.RETRY_COUNT);
             if (transactionState) {
                 LOG.debug("Writing super virtual interface to {} finished successfully.", PPrint.node(iidToVpp));
@@ -601,7 +601,8 @@ final class VppModifier {
         return vxlanBuilder.build();
     }
 
-    ListenableFuture<Void> addInterfaceToBridgeDomainOnVpp(final DataBroker vppDataBroker, final TerminationPointVbridgeAugment termPointVbridgeAug) {
+    ListenableFuture<Void> addInterfaceToBridgeDomainOnVpp(final InstanceIdentifier<Node> vppIid, final TerminationPointVbridgeAugment termPointVbridgeAug) {
+        final DataBroker vppDataBroker = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey();
         final InterfaceType interfaceType = termPointVbridgeAug.getInterfaceType();
         if (interfaceType instanceof UserInterface) {
             //REMARK: according contract in YANG model this should be URI to data on mount point (according to RESTCONF)
@@ -612,7 +613,7 @@ final class VppModifier {
                             .child(Interface.class, new InterfaceKey(userInterface.getValue()));
             InstanceIdentifier<L2> iiToV3poL2 = iiToVpp.augmentation(VppInterfaceAugmentation.class).child(L2.class);
             LOG.debug("Writing L2 data to configuration DS to concrete interface.");
-            VbdNetconfTransaction.netconfSyncedWrite(vppDataBroker, iiToV3poL2,  prepareL2Data(false, null),
+            VbdNetconfTransaction.netconfSyncedWrite(vppIid, iiToV3poL2,  prepareL2Data(false, null),
                     VbdNetconfTransaction.RETRY_COUNT);
         }
         return Futures.immediateFuture(null);
@@ -621,7 +622,7 @@ final class VppModifier {
     ListenableFuture<Void> addVppToBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker != null) {
-            VbdNetconfTransaction.netconfSyncedWrite(vppDataBroker, iiBridgeDomainOnVPP, prepareNewBridgeDomainData(),
+            VbdNetconfTransaction.netconfSyncedWrite(iiToVpp, iiBridgeDomainOnVPP, prepareNewBridgeDomainData(),
                     VbdNetconfTransaction.RETRY_COUNT);
             nodesWithBridgeDomain.add(iiToVpp.getKey());
             return Futures.immediateFuture(null);
@@ -699,7 +700,7 @@ final class VppModifier {
         final InstanceIdentifier<Interface> interfaceId = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
                 new InterfaceKey(vxlanId)).builder().build();
         LOG.debug("Removing bridge domain from vxlan {} on node {}", vxlanId, vppNodeIid);
-        boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(vppDataBroker, interfaceId,
+        boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(vppNodeIid, interfaceId,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Bridge domain successfully removed from vxlan interface on node {}", vppNodeIid);
@@ -716,7 +717,8 @@ final class VppModifier {
      *
      * @param vppDataBroker points to vppNode from which bridge domain will be removed
      */
-    private void findInterfacesWithAssignedBridgeDomain(final DataBroker vppDataBroker) {
+    private void findInterfacesWithAssignedBridgeDomain(final InstanceIdentifier<Node> vppIid) {
+        final DataBroker vppDataBroker = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(vppIid).getKey();
         LOG.debug("Reading interfaces assigned to bridge domain {} marked to delete", bridgeDomainName);
         final InstanceIdentifier<Interfaces> interfacesIid = InstanceIdentifier.create(Interfaces.class).builder().build();
         final Optional<Interfaces> optionalInterfaces = VbdNetconfTransaction.read(vppDataBroker,
@@ -741,7 +743,7 @@ final class VppModifier {
                             final InstanceIdentifier<L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
                                     .child(Interface.class, bdInterface.getKey()).augmentation(VppInterfaceAugmentation.class)
                                     .child(L2.class).builder().build();
-                            VbdNetconfTransaction.netconfSyncedDelete(vppDataBroker, augmentationIid,
+                            VbdNetconfTransaction.netconfSyncedDelete(vppIid, augmentationIid,
                                 VbdNetconfTransaction.RETRY_COUNT);
                             LOG.trace("Bridge domain {} removed from interface {}", bridgeDomainName, bdInterface.getName());
                         }
@@ -763,7 +765,7 @@ final class VppModifier {
                                             .child(Interface.class, bdInterface.getKey()).augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class)
                                             .child(SubInterface.class, new SubInterfaceKey(subInterface.getKey()))
                                             .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev170315.sub._interface.base.attributes.L2.class).builder().build();
-                                    VbdNetconfTransaction.netconfSyncedDelete(vppDataBroker, augmentationIid,
+                                    VbdNetconfTransaction.netconfSyncedDelete(vppIid, augmentationIid,
                                         VbdNetconfTransaction.RETRY_COUNT);
                                     LOG.trace("Bridge domain {} removed from sub-interface {}", bridgeDomainName, bdInterface.getName());
                                 }

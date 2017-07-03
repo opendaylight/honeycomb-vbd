@@ -9,19 +9,21 @@
 package org.opendaylight.vbd.impl;
 
 
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantLock;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collections;
-import com.google.common.base.Optional;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPoint;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.WriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.OptimisticLockFailedException;
+import org.opendaylight.vbd.impl.transaction.VbdNetconfTransaction;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.Dot1qVlanId;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.SVlan;
 import org.opendaylight.yang.gen.v1.urn.ieee.params.xml.ns.yang.dot1q.types.rev150626.dot1q.tag.or.any.Dot1qTag;
@@ -30,10 +32,10 @@ import org.opendaylight.yang.gen.v1.urn.opendaylight.l2.types.rev130827.VlanId;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.external.reference.rev160129.ExternalReference;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.BridgeDomainsState;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.VxlanVni;
-import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.state.BridgeDomain;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.state.BridgeDomainBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.bridge.domains.state.BridgeDomainKey;
+import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.v3po.rev170315.l2.base.attributes.interconnection.BridgeBasedBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev170327.BridgeDomainStatusAugmentation;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev170327.BridgeDomainStatusAugmentationBuilder;
 import org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vbridge.status.rev170327.BridgeDomainStatusFields;
@@ -87,6 +89,11 @@ import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+
 class VbdUtil {
 
     public static final TopologyId STARTUP_CONFIG_TOPOLOGY = new TopologyId("vbridge-startup-config"); // see vbridge-topology.yang
@@ -110,11 +117,17 @@ class VbdUtil {
     }
 
     static DataBroker resolveDataBrokerForMountPoint(final InstanceIdentifier<Node> iiToMountPoint, final MountPointService mountService) {
+        Entry<DataBroker, ReentrantLock> entry = VbdNetconfTransaction.NODE_DATA_BROKER_MAP.get(iiToMountPoint);
+        if (entry != null) {
+            return entry.getKey();
+        }
         final Optional<MountPoint> vppMountPointOpt = mountService.getMountPoint(iiToMountPoint);
         if (vppMountPointOpt.isPresent()) {
             final MountPoint vppMountPoint = vppMountPointOpt.get();
             final Optional<DataBroker> dataBrokerOpt = vppMountPoint.getService(DataBroker.class);
             if (dataBrokerOpt.isPresent()) {
+                VbdNetconfTransaction.NODE_DATA_BROKER_MAP.put(iiToMountPoint,
+                        new AbstractMap.SimpleEntry(dataBrokerOpt.get(), new ReentrantLock()));
                 return dataBrokerOpt.get();
             }
         }

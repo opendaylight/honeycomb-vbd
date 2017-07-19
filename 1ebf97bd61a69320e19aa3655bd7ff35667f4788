@@ -1,0 +1,8 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+1: Tomas Cechvala <tcechval@cisco.com>
+Code-Review+2: Michal Cmarada <mcmarada@cisco.com>
+Submitted-by: Michal Cmarada <mcmarada@cisco.com>
+Submitted-at: Wed, 19 Jul 2017 13:32:53 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/58513
+Project: honeycomb/vbd
+Branch: refs/heads/stable/carbon

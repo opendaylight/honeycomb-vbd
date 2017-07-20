@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
+import javax.swing.event.ListSelectionEvent;
 
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
@@ -85,6 +86,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.CheckedFuture;
@@ -320,9 +322,8 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                 final Collection<KeyedInstanceIdentifier<Node, NodeKey>> instanceIdentifiersVPP = nodesToVpps.get(node.getNodeId());
                 //TODO: probably iterate via all instance identifiers.
                 if (!instanceIdentifiersVPP.isEmpty()) {
-                    KeyedInstanceIdentifier<Node, NodeKey> iid = instanceIdentifiersVPP.iterator().next();
-                    VbdUtil.resolveDataBrokerForMountPoint(iid, mountService);
-                    cumulativeTask.add(vppModifier.addInterfaceToBridgeDomainOnVpp(iid, termPointVbridgeAug));
+                    final DataBroker dataBroker = VbdUtil.resolveDataBrokerForMountPoint(instanceIdentifiersVPP.iterator().next(), mountService);
+                    cumulativeTask.add(vppModifier.addInterfaceToBridgeDomainOnVpp(dataBroker, termPointVbridgeAug));
                 }
             }
         } );
@@ -537,12 +538,12 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                         .child(SubInterfaces.class)
                         .child(SubInterface.class, new SubInterfaceKey(subIntf.getKey()));
 
-        DataBroker dataBroker = VbdUtil.resolveDataBrokerForMountPoint(nodeIID, mountService);
-        if (dataBroker == null) {
+        final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(nodeIID, mountService);
+        if (vppDataBroker == null) {
             LOG.warn("Cannot get data broker to write interface to node {}", PPrint.node(nodeIID));
             return Futures.immediateFuture(null);
         }
-        final boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(nodeIID, iiToVlanSubIntf, subIntf,
+        final boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(vppDataBroker, iiToVlanSubIntf, subIntf,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
             LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());

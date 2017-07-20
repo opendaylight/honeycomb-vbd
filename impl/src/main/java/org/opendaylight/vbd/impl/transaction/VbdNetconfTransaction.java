@@ -8,27 +8,23 @@
 
 package org.opendaylight.vbd.impl.transaction;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 import javax.annotation.Nonnull;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.CheckedFuture;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
 import org.opendaylight.controller.md.sal.binding.api.ReadWriteTransaction;
 import org.opendaylight.controller.md.sal.common.api.data.LogicalDatastoreType;
 import org.opendaylight.controller.md.sal.common.api.data.ReadFailedException;
 import org.opendaylight.controller.md.sal.common.api.data.TransactionCommitFailedException;
-import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yangtools.yang.binding.DataObject;
 import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.CheckedFuture;
 
 /**
  * Provides basic CRD functionality using mountpoint and perform all necessary operations to ensure successful
@@ -37,50 +33,50 @@ import com.google.common.util.concurrent.CheckedFuture;
 public class VbdNetconfTransaction {
 
     public static final byte RETRY_COUNT = 3;
-    public static final Map<InstanceIdentifier<Node>, Map.Entry<DataBroker, ReentrantLock>> NODE_DATA_BROKER_MAP = new HashMap();
+    public static final ReentrantLock REENTRANT_LOCK = new ReentrantLock();
 
     private static final Logger LOG = LoggerFactory.getLogger(VbdNetconfTransaction.class);
 
     /***
      * Netconf wrapper method for synced requests for write operation on a Netconf Device
-     * @param vppIid        netconf device identifier
+     * @param mountpoint    netconf device
      * @param iid           path for Data to be written to
      * @param data          data to be written
      * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
      * @param <T>           data type
      * @return true if transaction is successful, false otherwise
      */
-    public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final InstanceIdentifier<Node> vppIid,
+    public static <T extends DataObject> boolean netconfSyncedWrite(@Nonnull final DataBroker mountpoint,
                                                                     @Nonnull final InstanceIdentifier<T> iid,
                                                                     @Nonnull final T data,
                                                                     byte retryCounter) {
-        NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-        boolean result = write(NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, data, retryCounter);
-        NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
+        REENTRANT_LOCK.lock();
+        boolean result = write(mountpoint, iid, data, retryCounter);
+        REENTRANT_LOCK.unlock();
         return result;
     }
 
     /***
      * Netconf wrapper method for synced requests for delete operation on a Netconf Device
-     * @param vppIid        netconf device identifier
+     * @param mountpoint    netconf device
      * @param iid           path for Data to be written to
      * @param retryCounter  retry counter, will repeat the operation for specified amount of times if transaction fails
      * @param <T>           data type
      * @return true if transaction is successful, false otherwise
      */
-    public static <T extends DataObject> boolean netconfSyncedDelete(@Nonnull final InstanceIdentifier<Node> vppIid,
+    public static <T extends DataObject> boolean netconfSyncedDelete(@Nonnull final DataBroker mountpoint,
                                                                      @Nonnull final InstanceIdentifier<T> iid,
                                                                      byte retryCounter) {
-        NODE_DATA_BROKER_MAP.get(vppIid).getValue().lock();
-        boolean result = deleteIfExists(NODE_DATA_BROKER_MAP.get(vppIid).getKey(), iid, retryCounter);
-        NODE_DATA_BROKER_MAP.get(vppIid).getValue().unlock();
+        REENTRANT_LOCK.lock();
+        boolean result = deleteIfExists(mountpoint, iid, retryCounter);
+        REENTRANT_LOCK.unlock();
         return result;
     }
 
     /**
      * Write data to remote device. Transaction is restarted if failed
      *
-     * @param vppIid       netconf device identifier
+     * @param mountpoint   to access remote device
      * @param iid          data identifier
      * @param data         to write
      * @param retryCounter number of attempts

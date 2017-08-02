@@ -10,8 +10,10 @@ package org.opendaylight.vbd.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -94,8 +96,10 @@ final class VppModifier {
     private final MountPointService mountService;
     private final String bridgeDomainName;
     private final VbdBridgeDomain vbdBridgeDomain;
-    private TopologyVbridgeAugment config;
     private final InstanceIdentifier<BridgeDomain> iiBridgeDomainOnVPP;
+    private final Map<KeyedInstanceIdentifier<Node, NodeKey>, Optional<Ipv4AddressNoZone>>
+        tenantInterfaceCache = new HashMap<>();
+    private TopologyVbridgeAugment config;
     private Set<NodeKey> nodesWithBridgeDomain = new HashSet<>();
 
     VppModifier(final MountPointService mountService, final String bridgeDomainName,
@@ -287,6 +291,12 @@ final class VppModifier {
             final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
         LOG.warn("Resolving IP: Processing Node: {}", iiToVpp.getPathArguments());
         final SettableFuture<Optional<Ipv4AddressNoZone>> resultFuture = SettableFuture.create();
+        if (tenantInterfaceCache.containsKey(iiToVpp)){
+            LOG.debug("Using cached IP for tenant interface for node with iiToVpp: {}, cached IP: {}", iiToVpp,
+                tenantInterfaceCache.get(iiToVpp));
+            resultFuture.set(tenantInterfaceCache.get(iiToVpp));
+            return resultFuture;
+        }
 
         final DataBroker vppDataBroker = VbdUtil.resolveDataBrokerForMountPoint(iiToVpp, mountService);
         if (vppDataBroker == null) {
@@ -327,6 +337,7 @@ final class VppModifier {
                 if (tpAug != null && tpAug.getInterfaceTypeCfg() instanceof VirtualDomainCarrierCase) {
                     LOG.trace("Resolving IP: Returning result future with: {}", optp.get());
                     resultFuture.set(ipOp);
+                    tenantInterfaceCache.put(iiToVpp, ipOp);
                     return resultFuture;
                 }
             } catch (InterruptedException | ExecutionException e) {
@@ -345,6 +356,7 @@ final class VppModifier {
                 final Optional<Ipv4AddressNoZone> ipOp = readIpAddressFromInterface(intf, iiToVpp);
                 if (ipOp.isPresent() && intf.getType().equals(EthernetCsmacd.class)) {
                     resultFuture.set(ipOp);
+                    tenantInterfaceCache.put(iiToVpp, ipOp);
                     return resultFuture;
                 }
             }
@@ -354,6 +366,7 @@ final class VppModifier {
             LOG.warn("Resolving IP: Returning IP address of unlabeled interface for node as tunnel interface: {}",
                     backupIp);
             resultFuture.set(Optional.of(backupIp));
+            tenantInterfaceCache.put(iiToVpp, Optional.of(backupIp));
             return resultFuture;
         }
         // if we got here, we were unable to successfully read an ip address from any of the

@@ -147,8 +147,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     @Override
     public synchronized void onDataTreeChanged(@Nonnull final Collection<DataTreeModification<Topology>> changes) {
         for (DataTreeModification<Topology> change : changes) {
-            LOG.debug("Bridge domain {} for {} processing change {}", this.bridgeDomainName, PPrint.topology(topology),
-                    change.getClass());
+            LOG.trace("Processing started: bridge domain {} on data tree changed", this.bridgeDomainName);
             final DataObjectModification<Topology> modification = change.getRootNode();
             ListenableFuture<Void> modificationTask;
             switch (modification.getModificationType()) {
@@ -181,6 +180,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                 }
             });
         }
+        LOG.trace("Processing finished: bridge domain {} on data tree changed", this.bridgeDomainName);
     }
 
     private ListenableFuture<Void> handleNewTopology(final DataObjectModification<Topology> modification) {
@@ -251,15 +251,19 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     private ListenableFuture<Void> handleModifiedNode(final DataObjectModification<? extends DataObject> nodeModification) {
         switch (nodeModification.getModificationType()) {
             case WRITE:
-                LOG.debug("Topology {} node {} created", PPrint.topology(topology), nodeModification.getIdentifier());
+                LOG.trace("Processing started: write bridge domain {} to node {}",
+                        PPrint.topology(topology), nodeModification.getIdentifier());
                 final Node newNode = (Node) nodeModification.getDataAfter();
                 if (newNode == null) {
                     LOG.warn("Provided node is null");
                     return Futures.immediateFuture(null);
                 }
+                LOG.trace("Processing finished: write bridge domain {} to node {}",
+                        PPrint.topology(topology), nodeModification.getIdentifier());
                 return handleNewModifiedNode(newNode);
             case SUBTREE_MODIFIED:
-                LOG.debug("Topology {} node {} modified", PPrint.topology(topology), nodeModification.getIdentifier());
+                LOG.trace("Processing started: modified bridge domain {} on node {}",
+                        PPrint.topology(topology), nodeModification.getIdentifier());
                 final HashMap<TerminationPoint, Node> modifiedNodes = new HashMap<>();
                 for (DataObjectModification<? extends DataObject> nodeChild : nodeModification.getModifiedChildren()) {
                     if (TerminationPoint.class.isAssignableFrom(nodeChild.getDataType())) {
@@ -268,6 +272,8 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                         modifiedNodes.put(modifedTerminationPoint, modifiedNode);
                     }
                 }
+                LOG.trace("Processing finished: modified bridge domain {} on node {}",
+                        PPrint.topology(topology), nodeModification.getIdentifier());
                 return handleUpdatedModifiedNodes(modifiedNodes);
             case DELETE:
                 LOG.debug("Topology {} node {} deleted", PPrint.topology(topology), nodeModification.getIdentifier());
@@ -597,7 +603,8 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         final KeyedInstanceIdentifier<Node, NodeKey> iiToSrcVpp = nodesToVpps.get(sourceNode).iterator().next();
         List<ListenableFuture<Void>> cumulativeTask = new ArrayList<>();
 
-        LOG.debug("adding tunnel to vpp node {} (vbd node is {})", PPrint.node(iiToSrcVpp), sourceNode.getValue());
+        LOG.trace("Processing started: adding tunnel to node {}", sourceNode.getValue());
+        // use this log
         for (final NodeId dstNode : getNodePeers(sourceNode)) {
             List<ListenableFuture<Void>> perPeerTask = new ArrayList<>();
             final KeyedInstanceIdentifier<Node, NodeKey> iiToDstVpp = nodesToVpps.get(dstNode).iterator().next();
@@ -634,6 +641,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             cumulativeTask.add(transform(processedPerPeerTask));
         }
         final ListenableFuture<List<Void>> processedCumulativeTask = Futures.allAsList(cumulativeTask);
+        LOG.trace("Processing finished: adding tunnel to node {}", sourceNode.getValue());
         return transform(processedCumulativeTask);
     }
 
@@ -676,6 +684,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     }
 
     private ListenableFuture<Void> createNode(final Node node) {
+        LOG.trace("Processing started: creating bridge domain on node {}", node);
         List<ListenableFuture<Void>> createdNodesFuture = new ArrayList<>();
         for (SupportingNode supportingNode : node.getSupportingNode()) {
             final NodeId nodeMount = supportingNode.getNodeRef();
@@ -702,6 +711,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                         supportingNode.getNodeRef(), VbdNetconfConnectionProbe.NODE_CONNECTION_TIMER);
             }
         }
+        LOG.trace("Processing finished: creating bridge domain on node {}", node);
         // configure all or nothing
         return Futures.transform(Futures.allAsList(createdNodesFuture), (Function<List<Void>, Void>) input -> null);
     }

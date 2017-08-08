@@ -19,6 +19,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.opendaylight.controller.md.sal.binding.api.BindingTransactionChain;
 import org.opendaylight.controller.md.sal.binding.api.ClusteredDataTreeChangeListener;
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
@@ -98,7 +100,7 @@ final class TopologyMonitor implements ClusteredDataTreeChangeListener<VbridgeTo
                     LOG.warn("VBridge topology {} {} procession failed", PPrint.topology(topology),
                             mod.getModificationType());
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 

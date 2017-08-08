@@ -21,6 +21,8 @@ import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPoint;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
@@ -275,7 +277,7 @@ class VbdUtil {
                     updateStatus(dataBroker, bdName, status);
                 }
             }
-        });
+        }, MoreExecutors.directExecutor());
         return Futures.immediateFuture(null);
     }
 

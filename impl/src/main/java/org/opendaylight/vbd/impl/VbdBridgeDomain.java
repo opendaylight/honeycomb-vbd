@@ -91,6 +91,7 @@ import com.google.common.util.concurrent.CheckedFuture;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 
 /**
  * Implementation of a single Virtual Bridge Domain. It is bound to a particular network topology instance, manages
@@ -177,7 +178,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                     LOG.warn("Topology change {} for bridge domain {} failed: {}", modification.getModificationType(),
                             PPrint.topology(topology), throwable);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 
@@ -306,7 +307,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                 }
                 return null;
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private ListenableFuture<Void> handleUpdatedModifiedNodes(final HashMap<TerminationPoint, Node> modifiedNodes) {
@@ -361,7 +362,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                     return null;
                 }
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private ListenableFuture<Void> wipeOperationalState(final KeyedInstanceIdentifier<Topology, TopologyKey> topology) {
@@ -395,7 +396,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             public void onFailure(@Nonnull Throwable t) {
                 LOG.warn("Can't read Bridge domain parameters!", t);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     @Nonnull
@@ -452,7 +453,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             }
 
             return Futures.immediateFuture(prunableLinks);
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private void pruneLinks(final KeyedInstanceIdentifier<Node, NodeKey> vbdNode) {
@@ -480,7 +481,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                         public void onFailure(@Nullable Throwable t) {
                             LOG.warn("Failed to delete prunable link {} for node {} on vbd topology {}", linkIID, PPrint.node(vbdNode), PPrint.topology(topology), t);
                         }
-                    });
+                    }, MoreExecutors.directExecutor());
                 }
             }
 
@@ -488,7 +489,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             public void onFailure(@Nullable Throwable t) {
                 LOG.warn("Failed to get prunable links for vbd topology {}", PPrint.topology(topology), t);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private ListenableFuture<Void> removeNodeFromBridgeDomain(final KeyedInstanceIdentifier<Node, NodeKey> vppNode,
@@ -511,7 +512,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             public void onFailure(@Nonnull Throwable t) {
                 LOG.warn("Failed to delete node {} from virtual bridge operational topology {}", backingNode.toString(), bridgeDomainName, t);
             }
-        });
+        }, MoreExecutors.directExecutor());
 
         nodesToVpps.removeAll(vppNode);
         return deleteNodeTask;
@@ -700,7 +701,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             }
         }
         // configure all or nothing
-        return Futures.transform(Futures.allAsList(createdNodesFuture), (Function<List<Void>, Void>) input -> null);
+        return Futures.transform(Futures.allAsList(createdNodesFuture), input -> null, MoreExecutors.directExecutor());
     }
 
     private ListenableFuture<Void> addSupportingBridgeDomain(final ListenableFuture<Void> addVppToBridgeDomainFuture,
@@ -715,7 +716,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             final WriteTransaction wTx = chain.newWriteOnlyTransaction();
             wTx.put(LogicalDatastoreType.OPERATIONAL, iiToBridgeMember, bridgeMemberBuilder.build(), true);
             return wTx.submit();
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private ListenableFuture<Void> addTerminationPoint(final KeyedInstanceIdentifier<Node, NodeKey> nodeIID,
@@ -803,6 +804,6 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                 // NOOP
                 return null;
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 }

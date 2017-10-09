@@ -10,13 +10,13 @@
   <parent>
     <groupId>org.opendaylight.odlparent</groupId>
     <artifactId>features-parent</artifactId>
-    <version>1.8.2-SNAPSHOT</version>
+    <version>1.8.2-Carbon</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-features</artifactId>
-  <version>1.1.2-SNAPSHOT</version>
+  <version>1.1.2-Carbon</version>
   <name>${project.artifactId}</name>
   <modelVersion>4.0.0</modelVersion>
 
@@ -24,13 +24,13 @@
     <maven>3.1.1</maven>
   </prerequisites>
   <properties>
-    <mdsal.version>2.2.2-SNAPSHOT</mdsal.version>
-    <mdsal.model.version>0.10.2-SNAPSHOT</mdsal.model.version>
-    <restconf.version>1.5.2-SNAPSHOT</restconf.version>
-    <netconf.version>1.2.2-SNAPSHOT</netconf.version>
-    <yangtools.version>1.1.2-SNAPSHOT</yangtools.version>
-    <dlux.version>0.5.2-SNAPSHOT</dlux.version>
-    <dluxapps.version>0.5.2-SNAPSHOT</dluxapps.version>
+    <mdsal.version>2.2.2-Carbon</mdsal.version>
+    <mdsal.model.version>0.10.2-Carbon</mdsal.model.version>
+    <restconf.version>1.5.2-Carbon</restconf.version>
+    <netconf.version>1.2.2-Carbon</netconf.version>
+    <yangtools.version>1.1.2-Carbon</yangtools.version>
+    <dlux.version>0.5.2-Carbon</dlux.version>
+    <dluxapps.version>0.5.2-Carbon</dluxapps.version>
     <configfile.directory>etc/opendaylight/karaf</configfile.directory>
   </properties>
   <dependencyManagement>
@@ -39,21 +39,21 @@
       <dependency>
         <groupId>org.opendaylight.mdsal</groupId>
         <artifactId>mdsal-artifacts</artifactId>
-        <version>2.2.2-SNAPSHOT</version>
+        <version>2.2.2-Carbon</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.mdsal.model</groupId>
         <artifactId>mdsal-model-artifacts</artifactId>
-        <version>0.10.2-SNAPSHOT</version>
+        <version>0.10.2-Carbon</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.opendaylight.yangtools</groupId>
         <artifactId>yangtools-artifacts</artifactId>
-        <version>1.1.2-SNAPSHOT</version>
+        <version>1.1.2-Carbon</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -67,7 +67,7 @@
       <dependency>
         <groupId>org.opendaylight.netconf</groupId>
         <artifactId>restconf-artifacts</artifactId>
-        <version>1.5.2-SNAPSHOT</version>
+        <version>1.5.2-Carbon</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -163,7 +163,7 @@
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>vbd-shared-models</artifactId>
-      <version>1.5.2-SNAPSHOT</version>
+      <version>1.5.2-Carbon</version>
     </dependency>
 
     <dependency>

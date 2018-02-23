@@ -10,14 +10,14 @@
   <parent>
     <groupId>org.opendaylight.mdsal</groupId>
     <artifactId>binding-parent</artifactId>
-    <version>0.11.2-SNAPSHOT</version>
+    <version>0.11.3-SNAPSHOT</version>
     <relativePath/>
   </parent>
 
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>vbd-api</artifactId>
-  <version>1.2.2-SNAPSHOT</version>
+  <version>1.2.3-SNAPSHOT</version>
   <packaging>bundle</packaging>
   <!-- <name> formatting is used by autorelease to parse and notify projects on
        build failure. Please do not modify this unless you have a good reason. -->
@@ -28,7 +28,7 @@
       <dependency>
         <groupId>org.opendaylight.mdsal.model</groupId>
         <artifactId>mdsal-model-artifacts</artifactId>
-        <version>0.11.2-SNAPSHOT</version>
+        <version>0.11.3-SNAPSHOT</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -60,7 +60,7 @@
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
       <artifactId>yang-ext</artifactId>
-      <version>2013.09.07.11.2-SNAPSHOT</version>
+      <version>2013.09.07.11.3-SNAPSHOT</version>
     </dependency>
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
@@ -69,7 +69,7 @@
     <dependency>
       <groupId>org.opendaylight.mdsal.model</groupId>
       <artifactId>opendaylight-l2-types</artifactId>
-      <version>2013.08.27.11.2-SNAPSHOT</version>
+      <version>2013.08.27.11.3-SNAPSHOT</version>
     </dependency>
   </dependencies>
 </project>

@@ -1,7 +1,7 @@
 module subinterface-nat {
   yang-version 1;
   namespace "urn:opendaylight:params:xml:ns:yang:subinterface:nat";
-  prefix "ifc-nat";
+  prefix "sub-ifc-nat";
 
   revision "2017-06-15" {
     description "Initial revision of subinterface-nat model";

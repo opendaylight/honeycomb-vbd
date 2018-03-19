@@ -67,13 +67,13 @@ module vpp-vlan {
                  are derived from";
   }
 
-  identity 802dot1q {
+  identity _802dot1q {
     base vlan-type;
     description
       "An 802.1Q VLAN type";
   }
 
-  identity 802dot1ad {
+  identity _802dot1ad {
     base vlan-type;
     description
       "An 802.1ad VLAN type";
@@ -134,7 +134,7 @@ module vpp-vlan {
   grouping sub-interface-base-attributes {
     leaf vlan-type {
       type vlan-type;
-      default 802dot1q;
+      default _802dot1q;
     }
 
     container tags {
@@ -239,7 +239,7 @@ module vpp-vlan {
 
     leaf vlan-type { // todo rename to push_dot1q, mandatory(?) with default true
       type vlan-type;
-      default 802dot1q;
+      default _802dot1q;
     }
 
     leaf pop-tags {

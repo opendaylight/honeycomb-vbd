@@ -29,7 +29,6 @@
         <module>vbd-features</module>
         <module>odl-vbd</module>
         <module>odl-vbd-rest</module>
-        <module>odl-vbd-ui</module>
     </modules>
 
     <!-- TODO remove snapshot -->

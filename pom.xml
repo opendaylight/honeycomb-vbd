@@ -31,8 +31,21 @@
     <module>gui</module>
     <module>features</module>
     <module>impl</module>
-    <module>karaf</module>
   </modules>
+
+  <profiles>
+    <profile>
+      <id>karaf</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+
+      <modules>
+        <module>karaf</module>
+      </modules>
+    </profile>
+  </profiles>
+
   <!-- DO NOT install or deploy the repo root pom as it's only needed to initiate a build -->
   <build>
     <plugins>

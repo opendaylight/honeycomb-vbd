@@ -1,7 +1,7 @@
 module nat-context {
     yang-version 1;
     namespace "urn:honeycomb:params:xml:ns:yang:nat:context";
-    prefix "nc";
+    prefix "nat-ctx";
 
     description "Context for nat mapping";
 

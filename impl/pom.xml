@@ -12,14 +12,14 @@
     <parent>
         <groupId>org.opendaylight.controller</groupId>
         <artifactId>config-parent</artifactId>
-        <version>0.6.4-SNAPSHOT</version>
+        <version>0.6.4-Carbon</version>
         <relativePath/>
     </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opendaylight.honeycomb.vbd</groupId>
   <artifactId>vbd-impl</artifactId>
-  <version>1.1.4-SNAPSHOT</version>
+  <version>1.1.4-Carbon</version>
   <packaging>bundle</packaging>
   <!-- <name> formatting is used by autorelease to parse and notify projects on
        build failure. Please do not modify this unless you have a good reason. -->
@@ -27,7 +27,7 @@
 
   <properties>
     <config.file>src/main/config/vbd.xml</config.file>
-    <netconf.version>1.2.4-SNAPSHOT</netconf.version>
+    <netconf.version>1.2.4-Carbon</netconf.version>
   </properties>
 
   <dependencyManagement>
@@ -42,7 +42,7 @@
       <dependency>
         <groupId>${project.groupId}</groupId>
         <artifactId>vbd-artifacts</artifactId>
-        <version>1.1.4-SNAPSHOT</version>
+        <version>1.1.4-Carbon</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -62,7 +62,7 @@
   <dependency>
       <groupId>org.opendaylight.mdsal</groupId>
       <artifactId>mdsal-singleton-common-api</artifactId>
-      <version>2.2.4-SNAPSHOT</version>
+      <version>2.2.4-Carbon</version>
   </dependency>
 
     <!-- Testing Dependencies -->

@@ -18,7 +18,7 @@
 
     <groupId>org.opendaylight.honeycomb.vbd</groupId>
     <artifactId>odl-vbd-ui</artifactId>
-    <version>1.2.3-SNAPSHOT</version>
+    <version>1.2.4-SNAPSHOT</version>
     <packaging>feature</packaging>
 
     <name>OpenDaylight :: vbd :: UI</name>
@@ -34,21 +34,21 @@
         <dependency>
             <groupId>org.opendaylight.netconf</groupId>
             <artifactId>odl-mdsal-apidocs</artifactId>
-            <version>1.6.3-SNAPSHOT</version>
+            <version>1.6.4-SNAPSHOT</version>
             <type>xml</type>
             <classifier>features</classifier>
         </dependency>
         <dependency>
             <groupId>org.opendaylight.dlux</groupId>
             <artifactId>odl-dlux-core</artifactId>
-            <version>0.6.3-SNAPSHOT</version>
+            <version>0.6.4-SNAPSHOT</version>
             <type>xml</type>
             <classifier>features</classifier>
         </dependency>
         <dependency>
             <groupId>org.opendaylight.dluxapps</groupId>
             <artifactId>odl-dluxapps-yangman</artifactId>
-            <version>0.6.3-SNAPSHOT</version>
+            <version>0.6.4-SNAPSHOT</version>
             <type>xml</type>
             <classifier>features</classifier>
         </dependency>

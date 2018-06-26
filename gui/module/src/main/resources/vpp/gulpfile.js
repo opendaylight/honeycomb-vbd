@@ -84,19 +84,19 @@ gulp.task('copyRootJs', function () {
  */
 gulp.task('copyVendorCss', function () {
     gutil.log(gutil.colors.cyan('INFO :: copying VENDOR css'));
-    return gulp.src(config.vendor_files.css, { cwd : 'vendor/**' })
+    return gulp.src(config.vendor_files.css, { cwd : 'node_modules/**' })
         .pipe(gulp.dest(config.build_dir + '/vendor'))
 });
 
 gulp.task('copyVendorFonts', function () {
     gutil.log(gutil.colors.cyan('INFO :: copying VENDOR fonts'));
-    return gulp.src(config.vendor_files.fonts, { cwd : 'vendor/**' })
+    return gulp.src(config.vendor_files.fonts, { cwd : 'node_modules/**' })
         .pipe(gulp.dest(config.build_dir + '/vendor'))
 });
 
 gulp.task('copyVendorJs', function () {
     gutil.log(gutil.colors.cyan('INFO :: copying VENDOR js files'));
-    return gulp.src(config.vendor_files.js, { cwd : 'vendor/**' })
+    return gulp.src(config.vendor_files.js, { cwd : 'node_modules/**' })
         .pipe(gulp.dest(config.build_dir + '/vendor'))
 });
 

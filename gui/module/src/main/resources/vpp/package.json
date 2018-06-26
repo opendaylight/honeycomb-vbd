@@ -4,7 +4,6 @@
   "description": "Opendaylight VPP UI",
   "main": "main.js",
   "devDependencies": {
-    "bower": "1.7.9",
     "gulp": "^3.9.1"
   },
   "dependencies": {
@@ -12,7 +11,12 @@
     "gulp-util": "^3.0.7",
     "gulp-concat": "^2.6.0",
     "gulp-install": "^0.6.0",
-    "run-sequence": "^1.1.5"
+    "run-sequence": "^1.1.5",
+    "angular-animate": "~1.4.12",
+    "angular-aria": "~1.4.12",
+    "angular-material": "1.0.5",
+    "angular-smart-table": "2.1.8",
+    "roboto-fontface": "~0.4.3"
   },
   "repository": {
     "type": "git",

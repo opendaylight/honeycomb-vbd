@@ -1,0 +1,7 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+2: Michal Cmarada <michal.cmarada@pantheon.tech>
+Submitted-by: Michal Cmarada <michal.cmarada@pantheon.tech>
+Submitted-at: Tue, 26 Jun 2018 08:18:49 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/73425
+Project: honeycomb/vbd
+Branch: refs/heads/stable/oxygen

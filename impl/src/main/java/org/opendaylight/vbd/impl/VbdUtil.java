@@ -141,7 +141,7 @@ class VbdUtil {
 
         final TopologyBuilder tb = new TopologyBuilder();
 
-        tb.setKey(topoIID.getKey())
+        tb.withKey(topoIID.getKey())
                 .setTopologyId(topoIID.getKey().getTopologyId())
                 .setTopologyTypes(topoType);
 
@@ -152,7 +152,7 @@ class VbdUtil {
                                            final Class<? extends VlanType> vlanType,
                                            final String bridgeDomainName) {
         final SubInterfaceBuilder subIntfBld = new SubInterfaceBuilder();
-        subIntfBld.setKey(new SubInterfaceKey((long) vlan.getValue()))
+        subIntfBld.withKey(new SubInterfaceKey((long) vlan.getValue()))
                 .setIdentifier((long) vlan.getValue())
                 .setL2(createSubInterfaceL2(bridgeDomainName))
                 .setMatch(createMatch())
@@ -209,7 +209,7 @@ class VbdUtil {
     }
 
     static void printVbridgeParams(final Topology t) {
-        TopologyVbridgeAugment t2 = t.getAugmentation(TopologyVbridgeAugment.class);
+        TopologyVbridgeAugment t2 = t.augmentation(TopologyVbridgeAugment.class);
         LOG.debug("Bridge Domain parameters:");
         LOG.debug("tunnelType: {}", t2.getTunnelType().getCanonicalName());
         LOG.debug("isFlood: {}", t2.isFlood());
@@ -257,7 +257,7 @@ class VbdUtil {
         bdStatusAugmentationBuilder.setBridgeDomainStatus(status);
         final BridgeDomain bdState = new BridgeDomainBuilder()
                 .setName(bdName)
-                .setKey(new BridgeDomainKey(bdName))
+                .withKey(new BridgeDomainKey(bdName))
                 .addAugmentation(BridgeDomainStatusAugmentation.class, bdStatusAugmentationBuilder.build())
                 .build();
         final WriteTransaction wTx = dataBroker.newWriteOnlyTransaction();

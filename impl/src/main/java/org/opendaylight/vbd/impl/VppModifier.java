@@ -158,7 +158,7 @@ final class VppModifier {
     private void deleteInterface(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final Interface intf) {
         LOG.debug("Deleting interface {} from config DS on vpp {}, it was supporting bridge domain {}", intf.getName(), PPrint.node(iiToVpp), bridgeDomainName);
 
-        final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToIntf = InstanceIdentifier.create(Interfaces.class).child(Interface.class, intf.getKey());
+        final KeyedInstanceIdentifier<Interface, InterfaceKey> iiToIntf = InstanceIdentifier.create(Interfaces.class).child(Interface.class, intf.key());
         final boolean transactionState = VbdNetconfTransaction.netconfSyncedDelete(iiToVpp, iiToIntf,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
@@ -179,7 +179,7 @@ final class VppModifier {
         Optional<IpAddress> vtepAddress = Optional.absent();
 
         for (final Interface intf : interfaces) {
-            final VppInterfaceAugmentation intfAug = intf.getAugmentation(VppInterfaceAugmentation.class);
+            final VppInterfaceAugmentation intfAug = intf.augmentation(VppInterfaceAugmentation.class);
 
             if (intfAug == null) {
                 continue;
@@ -191,20 +191,20 @@ final class VppModifier {
                 if (!tunnelSrcAddr.equals(vtepAddress.get())) {
                     LOG.warn("Got differing tunnel src addresses for interfaces which are supporting bridge domain " +
                             "{} on node {}. Going to assume the first one encountered ({}) is the real VTEP address. Differing address is {}",
-                            bridgeDomainName, PPrint.node(iiToVpp), String.valueOf(vtepAddress.get().getValue()), String.valueOf(tunnelSrcAddr.getValue()));
+                            bridgeDomainName, PPrint.node(iiToVpp), vtepAddress.get().stringValue(), tunnelSrcAddr.stringValue());
                 }
             } else {
                 vtepAddress = Optional.of(tunnelSrcAddr);
             }
         }
 
-        final String vtepIpStr = vtepAddress.isPresent() ? String.valueOf(vtepAddress.get().getValue()) : "UNKNOWN";
+        final String vtepIpStr = vtepAddress.isPresent() ? vtepAddress.get().stringValue() : "UNKNOWN";
         LOG.debug("VTEP address for node {} on bridge domain {} is {}", PPrint.node(iiToVpp), bridgeDomainName, vtepIpStr);
         return vtepAddress;
     }
 
     private void deletePeerInterfaces(final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp, final IpAddress deletedNodeAddress) {
-        LOG.debug("Deleting peer interfaces for node {} in bridge domain {}. Its VTEP address is {}", PPrint.node(iiToVpp), bridgeDomainName, String.valueOf(deletedNodeAddress.getValue()));
+        LOG.debug("Deleting peer interfaces for node {} in bridge domain {}. Its VTEP address is {}", PPrint.node(iiToVpp), bridgeDomainName, deletedNodeAddress.stringValue());
 
         final List<KeyedInstanceIdentifier<Node, NodeKey>> peerIIDs = vbdBridgeDomain.getNodePeersByIID(iiToVpp);
 
@@ -223,7 +223,7 @@ final class VppModifier {
     }
 
     private boolean doesInterfacePointTowardAddress(final Interface intf, final IpAddress address) {
-        final VppInterfaceAugmentation intfAug = intf.getAugmentation(VppInterfaceAugmentation.class);
+        final VppInterfaceAugmentation intfAug = intf.augmentation(VppInterfaceAugmentation.class);
 
         if (intfAug == null) {
             return false;
@@ -331,7 +331,7 @@ final class VppModifier {
                 }
                 LOG.trace("Resolving IP: Found startup config for interface {}", optp.get().getTpId());
                 TerminationPointVbridgeCfgAugment tpAug =
-                        optp.get().getAugmentation(TerminationPointVbridgeCfgAugment.class);
+                        optp.get().augmentation(TerminationPointVbridgeCfgAugment.class);
                 if (tpAug != null && tpAug.getInterfaceTypeCfg() instanceof VirtualDomainCarrierCase) {
                     LOG.trace("Resolving IP: Returning result future with: {}", optp.get());
                     resultFuture.set(ipOp);
@@ -381,7 +381,7 @@ final class VppModifier {
      */
     private Optional<Ipv4AddressNoZone> readIpAddressFromInterface(final Interface intf,
             final KeyedInstanceIdentifier<Node, NodeKey> iiToVpp) {
-        final Interface1 augIntf = intf.getAugmentation(Interface1.class);
+        final Interface1 augIntf = intf.augmentation(Interface1.class);
 
         if (augIntf == null) {
             LOG.debug("Cannot get Interface1 augmentation for intf {}", intf);
@@ -443,7 +443,7 @@ final class VppModifier {
         if (potentialExistingInterfaceTunnelId != null) {
             LOG.debug("Interface with srcIp {} and dstIp {} found, bridge domain will be added.", ipSrc, ipDst);
             final Interface interfaceData = prepareVirtualInterfaceData(vxlanData, vxlanTunnelId);
-            final L2 l2Data = interfaceData.getAugmentation(VppInterfaceAugmentation.class).getL2();
+            final L2 l2Data = interfaceData.augmentation(VppInterfaceAugmentation.class).getL2();
             LOG.trace("L2 data: {}", l2Data);
             final String vxlanId = VbdUtil.provideVxlanId(potentialExistingInterfaceTunnelId);
             final InstanceIdentifier<L2> l2Iid = InstanceIdentifier.create(Interfaces.class).child(Interface.class,
@@ -509,7 +509,7 @@ final class VppModifier {
         for (Interface potentialVxlan : interfaces) {
             if (potentialVxlan.getType() != null && potentialVxlan.getType().equals(VxlanTunnel.class)) {
                 // Get augmentation
-                final VppInterfaceAugmentation augmentation = potentialVxlan.getAugmentation(VppInterfaceAugmentation.class);
+                final VppInterfaceAugmentation augmentation = potentialVxlan.augmentation(VppInterfaceAugmentation.class);
                 if (augmentation != null && augmentation.getVxlan() != null) {
                     final Vxlan vxlan = augmentation.getVxlan();
                     // Resolve ip addresses, only Ipv4 addresses are supported
@@ -629,7 +629,7 @@ final class VppModifier {
     }
 
     private boolean isInterfaceSupportingBD(final Interface intf) {
-        final VppInterfaceAugmentation vppInterface = intf.getAugmentation(VppInterfaceAugmentation.class);
+        final VppInterfaceAugmentation vppInterface = intf.augmentation(VppInterfaceAugmentation.class);
         if(vppInterface == null) {
             return false;
         }
@@ -698,9 +698,9 @@ final class VppModifier {
             final List<Interface> interfaceList = interfaces.getInterface();
             for (final Interface bdInterface : interfaceList) {
                 final VppInterfaceAugmentation interfaceAugmentation =
-                        bdInterface.getAugmentation(VppInterfaceAugmentation.class);
+                        bdInterface.augmentation(VppInterfaceAugmentation.class);
                 final SubinterfaceAugmentation subInterfaceAugmentation =
-                        bdInterface.getAugmentation(SubinterfaceAugmentation.class);
+                        bdInterface.augmentation(SubinterfaceAugmentation.class);
                 // Vxlan case
                 if (interfaceAugmentation != null && interfaceAugmentation.getL2() != null) {
                     final L2 l2 = interfaceAugmentation.getL2();
@@ -711,7 +711,7 @@ final class VppModifier {
                             LOG.trace("Interface {} has assigned bd which will be removed. Disconnecting ...",
                                     bdInterface.getName());
                             final InstanceIdentifier<L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
-                                    .child(Interface.class, bdInterface.getKey()).augmentation(VppInterfaceAugmentation.class)
+                                    .child(Interface.class, bdInterface.key()).augmentation(VppInterfaceAugmentation.class)
                                     .child(L2.class).builder().build();
                             VbdNetconfTransaction.netconfSyncedDelete(vppIid, augmentationIid,
                                 VbdNetconfTransaction.RETRY_COUNT);
@@ -733,8 +733,8 @@ final class VppModifier {
                                     LOG.trace("Sub-interface {} has assigned bd which will be removed. Disconnecting ...",
                                             bdInterface.getName());
                                     final InstanceIdentifier<org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev180319.sub._interface.l2.config.attributes.L2> augmentationIid = InstanceIdentifier.create(Interfaces.class)
-                                            .child(Interface.class, bdInterface.getKey()).augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class)
-                                            .child(SubInterface.class, new SubInterfaceKey(subInterface.getKey()))
+                                            .child(Interface.class, bdInterface.key()).augmentation(SubinterfaceAugmentation.class).child(SubInterfaces.class)
+                                            .child(SubInterface.class, new SubInterfaceKey(subInterface.key()))
                                             .child(org.opendaylight.yang.gen.v1.urn.opendaylight.params.xml.ns.yang.vpp.vlan.rev180319.sub._interface.l2.config.attributes.L2.class).builder().build();
                                     VbdNetconfTransaction.netconfSyncedDelete(vppIid, augmentationIid,
                                         VbdNetconfTransaction.RETRY_COUNT);

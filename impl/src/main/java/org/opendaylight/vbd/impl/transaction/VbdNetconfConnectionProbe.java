@@ -108,7 +108,7 @@ public class VbdNetconfConnectionProbe implements ClusteredDataTreeChangeListene
     }
 
     private NetconfNode getNodeAugmentation(Node node) {
-        NetconfNode netconfNode = node.getAugmentation(NetconfNode.class);
+        NetconfNode netconfNode = node.augmentation(NetconfNode.class);
         if (netconfNode == null) {
             LOG.warn("Node {} is not a netconf device", node.getNodeId().getValue());
             return null;

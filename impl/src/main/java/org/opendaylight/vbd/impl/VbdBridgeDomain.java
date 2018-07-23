@@ -190,7 +190,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         Preconditions.checkNotNull(modification.getDataAfter());
         final Topology data = modification.getDataAfter();
         // Handle VBridge augmentation
-        final TopologyVbridgeAugment vbdConfiguration = data.getAugmentation(TopologyVbridgeAugment.class);
+        final TopologyVbridgeAugment vbdConfiguration = data.augmentation(TopologyVbridgeAugment.class);
         if (vbdConfiguration != null) {
             // Spread configuration
             setConfiguration(vbdConfiguration);
@@ -300,7 +300,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                         }
                     // Vlan tunnel type
                     } else if (config.getTunnelType().equals(TunnelTypeVlan.class)) {
-                        final NodeVbridgeVlanAugment vlanAug = newNode.getAugmentation(NodeVbridgeVlanAugment.class);
+                        final NodeVbridgeVlanAugment vlanAug = newNode.augmentation(NodeVbridgeVlanAugment.class);
                         return addVlanSubInterface(newNode.getNodeId(), vlanAug.getSuperInterface()).get();
                     } else {
                         LOG.warn("Unknown tunnel type {}", config.getTunnelType());
@@ -317,9 +317,9 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
     private ListenableFuture<Void> handleUpdatedModifiedNodes(final HashMap<TerminationPoint, Node> modifiedNodes) {
         final List<ListenableFuture<Void>> cumulativeTask = new ArrayList<>();
         modifiedNodes.forEach( (terminationPoint, node) -> {
-            if (terminationPoint != null && terminationPoint.getAugmentation(TerminationPointVbridgeAugment.class) != null
+            if (terminationPoint != null && terminationPoint.augmentation(TerminationPointVbridgeAugment.class) != null
                     && node.getNodeId() != null) {
-                final TerminationPointVbridgeAugment termPointVbridgeAug = terminationPoint.getAugmentation(TerminationPointVbridgeAugment.class);
+                final TerminationPointVbridgeAugment termPointVbridgeAug = terminationPoint.augmentation(TerminationPointVbridgeAugment.class);
                 final Collection<KeyedInstanceIdentifier<Node, NodeKey>> instanceIdentifiersVPP = nodesToVpps.get(node.getNodeId());
                 //TODO: probably iterate via all instance identifiers.
                 if (!instanceIdentifiersVPP.isEmpty()) {
@@ -339,7 +339,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             return Futures.immediateFuture(null);
         }
         final KeyedInstanceIdentifier<Node, NodeKey> vppNodeIid = nodesToVpps.get(deletedNode.getNodeId()).iterator().next();
-        final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIid = topology.child(Node.class, deletedNode.getKey());
+        final KeyedInstanceIdentifier<Node, NodeKey> backingNodeIid = topology.child(Node.class, deletedNode.key());
         LOG.debug("Removing node from BD. Node: {}. backing node: {}", PPrint.node(vppNodeIid),
                 PPrint.node(backingNodeIid));
         final ListenableFuture<Void> removeNodeTask = removeNodeFromBridgeDomain(vppNodeIid, backingNodeIid);
@@ -443,11 +443,11 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
                     final Destination dst = link.getDestination();
                     if (src.getSourceNode().equals(deletedNodeId)) {
                         LOG.debug("Link {} src matches deleted node id {}, adding to prunable list", link.getLinkId(), deletedNodeId);
-                        final InstanceIdentifier<Link> linkIID = topology.child(Link.class, link.getKey());
+                        final InstanceIdentifier<Link> linkIID = topology.child(Link.class, link.key());
                         prunableLinks.add(linkIID);
                     } else if (dst.getDestNode().equals(deletedNodeId)) {
                         LOG.debug("Link {} dst matches deleted node id {}, adding to prunable list", link.getLinkId(), deletedNodeId);
-                        final InstanceIdentifier<Link> linkIID = topology.child(Link.class, link.getKey());
+                        final InstanceIdentifier<Link> linkIID = topology.child(Link.class, link.key());
                         prunableLinks.add(linkIID);
                     }
                 }
@@ -537,7 +537,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         final KeyedInstanceIdentifier<SubInterface, SubInterfaceKey> iiToVlanSubIntf =
                 iiToSupIntf.augmentation(SubinterfaceAugmentation.class)
                         .child(SubInterfaces.class)
-                        .child(SubInterface.class, new SubInterfaceKey(subIntf.getKey()));
+                        .child(SubInterface.class, new SubInterfaceKey(subIntf.key()));
 
         DataBroker dataBroker = VbdUtil.resolveDataBrokerForMountPoint(nodeIID, mountService);
         if (dataBroker == null) {
@@ -547,9 +547,9 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
         final boolean transactionState = VbdNetconfTransaction.netconfSyncedWrite(nodeIID, iiToVlanSubIntf, subIntf,
                 VbdNetconfTransaction.RETRY_COUNT);
         if (transactionState) {
-            LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
+            LOG.debug("Successfully wrote subinterface {} to node {}", subIntf.key().getIdentifier(), nodeId.getValue());
         } else {
-            LOG.warn("Failed to write subinterface {} to node {}", subIntf.getKey().getIdentifier(), nodeId.getValue());
+            LOG.warn("Failed to write subinterface {} to node {}", subIntf.key().getIdentifier(), nodeId.getValue());
         }
         return Futures.immediateFuture(null);
     }
@@ -714,7 +714,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             LOG.debug("Storing bridge member to operational DS....");
             final BridgeMemberBuilder bridgeMemberBuilder = new BridgeMemberBuilder();
             bridgeMemberBuilder.setSupportingBridgeDomain(new ExternalReference(iiBridgeDomainOnVPPRest));
-            final InstanceIdentifier<BridgeMember> iiToBridgeMember = topology.child(Node.class, node.getKey())
+            final InstanceIdentifier<BridgeMember> iiToBridgeMember = topology.child(Node.class, node.key())
                     .augmentation(NodeVbridgeAugment.class)
                     .child(BridgeMember.class);
             final WriteTransaction wTx = chain.newWriteOnlyTransaction();
@@ -740,7 +740,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
 
         // process data
         final WriteTransaction wTx = chain.newWriteOnlyTransaction();
-        wTx.put(LogicalDatastoreType.OPERATIONAL, nodeIID.child(TerminationPoint.class, tp.getKey()), tp, true);
+        wTx.put(LogicalDatastoreType.OPERATIONAL, nodeIID.child(TerminationPoint.class, tp.key()), tp, true);
         LOG.debug("Adding termination point to node {}", nodeIID.getKey());
         return wTx.submit();
     }
@@ -773,7 +773,7 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             final Optional<Topology> optionalBdTopology = futureTopology.get();
             if (optionalBdTopology.isPresent()) {
                 final Topology bdTopology = optionalBdTopology.get();
-                final TopologyVbridgeAugment augmentation = bdTopology.getAugmentation(TopologyVbridgeAugment.class);
+                final TopologyVbridgeAugment augmentation = bdTopology.augmentation(TopologyVbridgeAugment.class);
                 if (augmentation != null && augmentation.getTunnelParameters() != null
                         && augmentation.getTunnelParameters() instanceof VxlanTunnelParameters) {
                     final VxlanTunnelParameters params = (VxlanTunnelParameters) augmentation.getTunnelParameters();

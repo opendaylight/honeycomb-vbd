@@ -1,0 +1,7 @@
+Verified+1: jenkins-releng <jenkins-releng@opendaylight.org>
+Code-Review+2: Robert Varga <nite@hq.sk>
+Submitted-by: Robert Varga <nite@hq.sk>
+Submitted-at: Thu, 26 Jul 2018 18:50:19 +0000
+Reviewed-on: https://git.opendaylight.org/gerrit/74322
+Project: honeycomb/vbd
+Branch: refs/heads/master

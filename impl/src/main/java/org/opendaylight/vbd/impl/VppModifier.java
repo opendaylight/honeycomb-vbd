@@ -5,9 +5,13 @@
  * terms of the Eclipse Public License v1.0 which accompanies this distribution,
  * and is available at http://www.eclipse.org/legal/epl-v10.html
  */
-
 package org.opendaylight.vbd.impl;
 
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -15,10 +19,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import org.opendaylight.controller.md.sal.binding.api.DataBroker;
 import org.opendaylight.controller.md.sal.binding.api.MountPointService;
 import org.opendaylight.controller.md.sal.binding.api.ReadOnlyTransaction;
@@ -72,12 +74,6 @@ import org.opendaylight.yangtools.yang.binding.InstanceIdentifier;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.SettableFuture;
 
 /**
  *  Class which is used for manipulation with VPP
@@ -612,12 +608,12 @@ final class VppModifier {
      * @param splitHgrp value for Split horizon group for the L2 object
      * @return the built L2 object
      */
-    private L2 prepareL2Data(final boolean bridgedVirtualInterface, final Short splitHgrp ) {
+    private L2 prepareL2Data(final boolean bridgedVirtualInterface, final Short splitHgrp) {
         final L2Builder l2Builder = new L2Builder();
         final BridgeBasedBuilder bridgeBasedBuilder = new BridgeBasedBuilder();
         bridgeBasedBuilder.setBridgedVirtualInterface(bridgedVirtualInterface);
         bridgeBasedBuilder.setBridgeDomain(bridgeDomainName);
-        if (splitHgrp!=null) {
+        if (splitHgrp != null) {
             bridgeBasedBuilder.setSplitHorizonGroup(splitHgrp);
         }
         l2Builder.setInterconnection(bridgeBasedBuilder.build());
@@ -630,7 +626,7 @@ final class VppModifier {
 
     private boolean isInterfaceSupportingBD(final Interface intf) {
         final VppInterfaceAugmentation vppInterface = intf.augmentation(VppInterfaceAugmentation.class);
-        if(vppInterface == null) {
+        if (vppInterface == null) {
             return false;
         }
 

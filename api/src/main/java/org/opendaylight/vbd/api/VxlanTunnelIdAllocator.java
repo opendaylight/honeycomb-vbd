@@ -7,19 +7,16 @@
  */
 package org.opendaylight.vbd.api;
 
-
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.Node;
 import org.opendaylight.yang.gen.v1.urn.tbd.params.xml.ns.yang.network.topology.rev131021.network.topology.topology.NodeKey;
 import org.opendaylight.yangtools.yang.binding.KeyedInstanceIdentifier;
 
-
 public interface VxlanTunnelIdAllocator {
-
     /**
-     * Allocate next available vxlan tunnel ID
+     * Allocate next available vxlan tunnel ID.
      *
      * @param vpp specify contret vpp for which is next available vxlan id looked for
      * @return next available (in order) vxlan id.
      */
-    Integer nextIdFor(final KeyedInstanceIdentifier<Node, NodeKey> vpp);
+    Integer nextIdFor(KeyedInstanceIdentifier<Node, NodeKey> vpp);
 }

@@ -7,6 +7,10 @@ module vpp-pbb {
     description "Initial revision of pbb model";
   }
 
+  import ietf-interfaces {
+      prefix "if";
+  }
+
   import pbb-types {
     prefix "pbb-types";
   }

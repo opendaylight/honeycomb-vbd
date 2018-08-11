@@ -193,9 +193,8 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             LOG.error("Topology {} has no configuration", PPrint.topology(topology));
         }
         // Handle new nodes
-        final Collection<DataObjectModification<? extends DataObject>> modifiedChildren = modification.getModifiedChildren();
         final List<ListenableFuture<Void>> newCumulativeTopologyResult = new ArrayList<>();
-        for (final DataObjectModification<? extends DataObject> childNode : modifiedChildren) {
+        for (final DataObjectModification<? extends DataObject> childNode : modification.getModifiedChildren()) {
             LOG.debug("Processing created child {} from topology {}", childNode, PPrint.topology(topology));
             if (Node.class.isAssignableFrom(childNode.getDataType())) {
                 newCumulativeTopologyResult.add(handleModifiedNode(childNode));
@@ -216,9 +215,8 @@ public final class VbdBridgeDomain implements ClusteredDataTreeChangeListener<To
             updateConfiguration(topologyModification);
         }
         // Handle new/modified nodes
-        final Collection<DataObjectModification<? extends DataObject>> modifiedChildren = modification.getModifiedChildren();
         final List<ListenableFuture<Void>> updatedCumulativeTopologyTask = new ArrayList<>();
-        for (final DataObjectModification<? extends DataObject> childNode : modifiedChildren) {
+        for (final DataObjectModification<? extends DataObject> childNode : modification.getModifiedChildren()) {
             LOG.debug("Processing modified child {} from topology {}", childNode, PPrint.topology(topology));
             if (Node.class.isAssignableFrom(childNode.getDataType())) {
                 updatedCumulativeTopologyTask.add(handleModifiedNode(childNode));

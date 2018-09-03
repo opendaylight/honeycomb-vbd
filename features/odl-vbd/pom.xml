@@ -18,7 +18,7 @@
 
     <groupId>org.opendaylight.honeycomb.vbd</groupId>
     <artifactId>odl-vbd</artifactId>
-    <version>1.4.0-SNAPSHOT</version>
+    <version>1.4.0</version>
     <packaging>feature</packaging>
 
     <name>OpenDaylight :: vbd</name>

@@ -1,0 +1,63 @@
+---
+project: 'honeycomb_vbd'
+project_creation_date: '2016-03-17'
+project_category: ''
+lifecycle_state: 'Incubation'
+project_lead: &odl_honeycomb_vbd_ptl
+    name: 'Michal Cmarada'
+    email: 'michal.cmarada@gmail.com'
+    company: 'gmail'
+    id: 'mcmarada'
+    timezone: 'Unknown/Unknown'
+primary_contact: *odl_honeycomb_vbd_ptl
+issue_tracking:
+    type: 'jira'
+    url: 'https://jira.opendaylight.org/projects/'
+    key: 'honeycomb_vbd'
+mailing_list:
+    type: 'groups.io'
+    url: 'app-dev@lists.opendaylight.org'
+    tag: '[]'
+realtime_discussion:
+    type: 'irc'
+    server: 'freenode.net'
+    channel: '#opendaylight'
+meetings:
+    - type: 'gotomeeting+irc'
+      agenda: 'https://wiki.opendaylight.org/display/'
+      url: ''
+      server: 'freenode.net'
+      channel: '#odl'
+      repeats: ''
+      time: ''
+repositories:
+    - honeycomb/vbd
+committers:
+    - <<: *odl_honeycomb_vbd_ptl
+    - name: 'Ed Warnicke'
+      email: 'hagbard@gmail.com'
+      company: ''
+      id: 'hagbard'
+      timezone: 'Unknown/Unknown'
+    - name: 'Daniel Malachovsky'
+      email: 'daniel.malachovsky@pantheon.tech'
+      company: 'pantheon'
+      id: 'malachovsky'
+      timezone: 'Unknown/Unknown'
+    - name: 'Marek Gradzki'
+      email: 'margradz@gmail.com'
+      company: ''
+      id: 'mgradzki'
+      timezone: 'Unknown/Unknown'
+    - name: 'Robert Varga'
+      email: 'nite@hq.sk'
+      company: 'pantheon'
+      id: 'rovarga'
+      timezone: 'Unknown/Unknown'
+tsc:
+    # yamllint disable rule:line-length
+    approval: 'https://meetings.opendaylight.org/meetings/opendaylight-meeting/2016/tsc/opendaylight-meeting-tsc.2016-03-17-17.00.html'
+    changes:
+        - type: ''
+          name: ''
+          link: ''

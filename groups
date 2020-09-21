@@ -1,4 +1,5 @@
 # UUID                                                                       	Group Name
 #
+bf889a40fe958f2f734708e63cd9ffdd449f5cf7                                     	saml/odl-gerrit-honeycomb-vbd-committers
 c9025ab9ddc1e3171919e085449f22c54f8f7b54                                     	GitHub Replication
 ldap:cn=odl-gerrit-honeycomb-vbd-committers,ou=Groups,dc=freestandards,dc=org	ldap/odl-gerrit-honeycomb-vbd-committers
